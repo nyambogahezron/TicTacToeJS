@@ -1,19 +1,13 @@
 import React from 'react';
-import {
-	View,
-	Text,
-	StyleSheet,
-	Dimensions,
-	TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Trophy, Target, Zap, Award } from 'lucide-react-native';
-
-const { width } = Dimensions.get('window');
+import { useTheme } from '@/context/ThemeProvider';
 
 export default function StatsScreen() {
+	const { colors } = useTheme();
 	const stats = {
 		wins: 23,
 		losses: 12,

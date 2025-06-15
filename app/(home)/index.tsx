@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import GameBoard from '@/components/GameBoard';
@@ -11,6 +11,18 @@ import { useTheme } from '@/context/ThemeProvider';
 
 export default function GameScreen() {
 	const { state, dispatch } = useGame();
+	const { colors } = useTheme();
+	const [coinPopup, setCoinPopup] = useState<{ amount: number } | null>(null);
+	const [prevCoins, setPrevCoins] = useState(state.coins);
+
+	// Track coin changes and show popup
+	useEffect(() => {
+		if (state.coins > prevCoins) {
+			const earnedCoins = state.coins - prevCoins;
+			setCoinPopup({ amount: earnedCoins });
+		}
+		setPrevCoins(state.coins);
+	}, [state.coins]);
 
 	const handleOverlayPress = () => {
 		if (state.winner) {
