@@ -9,38 +9,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import {
-	Trophy,
-	Target,
-	Zap,
-	Award,
-	ArrowLeft,
-	Coins,
-} from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import { useTheme } from '@/context/ThemeProvider';
-import { useGame } from '@/context/GameProvider';
+import { Trophy, Target, Zap, Award } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
 
 export default function StatsScreen() {
-	const router = useRouter();
-	const { colors } = useTheme();
-	const { state } = useGame();
-
 	const stats = {
-		wins: state.score.X,
-		losses: state.score.O,
-		draws: state.score.draws,
-		winRate:
-			state.score.X + state.score.O + state.score.draws > 0
-				? Math.round(
-						(state.score.X /
-							(state.score.X + state.score.O + state.score.draws)) *
-							100
-				  )
-				: 0,
-		coins: state.coins,
+		wins: 23,
+		losses: 12,
+		draws: 8,
+		winRate: 85,
 	};
 
 	const StatCard = ({ icon: Icon, title, value, color }: any) => (
@@ -66,42 +44,15 @@ export default function StatsScreen() {
 	);
 
 	return (
-		<LinearGradient colors={colors.background} style={styles.container}>
+		<LinearGradient
+			colors={['#0f172a', '#1e293b', '#334155']}
+			style={styles.container}
+		>
 			<SafeAreaView style={styles.safeArea}>
 				<View style={styles.content}>
-					<View style={styles.header}>
-						<TouchableOpacity
-							style={styles.backButton}
-							onPress={() => router.back()}
-							activeOpacity={0.8}
-						>
-							<ArrowLeft size={24} color={colors.text} />
-						</TouchableOpacity>
-						<Animated.Text
-							entering={FadeInUp.springify()}
-							style={[styles.title, { color: colors.text }]}
-						>
-							Your Statistics
-						</Animated.Text>
-						<View style={styles.backButton} />
-					</View>
-
-					<Animated.View
-						entering={FadeInUp.delay(100).springify()}
-						style={[styles.coinCard, { backgroundColor: colors.card }]}
-					>
-						<View style={[styles.coinIcon, { backgroundColor: '#f59e0b' }]}>
-							<Coins size={24} color='#fff' />
-						</View>
-						<View style={styles.coinContent}>
-							<Text style={[styles.coinValue, { color: colors.cardText }]}>
-								{stats.coins}
-							</Text>
-							<Text style={[styles.coinTitle, { color: colors.cardSubtext }]}>
-								Total Coins
-							</Text>
-						</View>
-					</Animated.View>
+					<Animated.Text entering={FadeInUp.springify()} style={styles.title}>
+						Your Statistics
+					</Animated.Text>
 
 					<View style={styles.statsGrid}>
 						<StatCard
@@ -147,27 +98,18 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 20,
 		paddingTop: 20,
 	},
-	header: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'space-between',
-		marginBottom: 40,
-	},
-	backButton: {
-		width: 40,
-		height: 40,
-		alignItems: 'center',
-		justifyContent: 'center',
-	},
 	title: {
 		fontSize: 32,
 		fontFamily: 'Inter-Bold',
+		color: '#fff',
 		textAlign: 'center',
+		marginBottom: 40,
 	},
 	statsGrid: {
 		gap: 16,
 	},
 	card: {
+		backgroundColor: 'rgba(255, 255, 255, 0.1)',
 		borderRadius: 16,
 		padding: 20,
 		flexDirection: 'row',
@@ -184,39 +126,12 @@ const styles = StyleSheet.create({
 	cardValue: {
 		fontSize: 24,
 		fontFamily: 'Inter-Bold',
+		color: '#fff',
 		marginBottom: 4,
 	},
 	cardTitle: {
 		fontSize: 16,
 		fontFamily: 'Inter-SemiBold',
-	},
-	coinCard: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		padding: 16,
-		borderRadius: 16,
-		marginBottom: 20,
-		borderLeftWidth: 4,
-		borderLeftColor: '#f59e0b',
-	},
-	coinIcon: {
-		width: 48,
-		height: 48,
-		borderRadius: 24,
-		justifyContent: 'center',
-		alignItems: 'center',
-		marginRight: 16,
-	},
-	coinContent: {
-		flex: 1,
-	},
-	coinValue: {
-		fontSize: 24,
-		fontFamily: 'Inter-Bold',
-		marginBottom: 4,
-	},
-	coinTitle: {
-		fontSize: 14,
-		fontFamily: 'Inter-Medium',
+		color: '#94a3b8',
 	},
 });
