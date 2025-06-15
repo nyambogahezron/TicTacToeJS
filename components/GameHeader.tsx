@@ -1,4 +1,4 @@
-import { Bot, RotateCcw, User } from 'lucide-react-native';
+import { Bot, RotateCcw, User, Settings, BarChart2 } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
@@ -8,9 +8,11 @@ import Animated, {
 	withSpring,
 } from 'react-native-reanimated';
 import { useGame } from './GameProvider';
+import { useRouter } from 'expo-router';
 
 export default function GameHeader() {
 	const { state, dispatch } = useGame();
+	const router = useRouter();
 	const scale = useSharedValue(1);
 
 	const resetButtonStyle = useAnimatedStyle(() => ({
@@ -40,6 +42,16 @@ export default function GameHeader() {
 		return '#60a5fa';
 	};
 
+	const IconButton = ({ icon: Icon, onPress, color = '#fff' }: any) => (
+		<TouchableOpacity
+			style={[styles.iconButton, { borderColor: 'rgba(255, 255, 255, 0.2)' }]}
+			onPress={onPress}
+			activeOpacity={0.8}
+		>
+			<Icon size={20} color={color} />
+		</TouchableOpacity>
+	);
+
 	return (
 		<Animated.View entering={FadeInUp.springify()} style={styles.container}>
 			<View style={styles.header}>
@@ -56,15 +68,27 @@ export default function GameHeader() {
 					</View>
 				</View>
 
-				<Animated.View style={resetButtonStyle}>
-					<TouchableOpacity
-						style={styles.resetButton}
-						onPress={handleReset}
-						activeOpacity={0.8}
-					>
-						<RotateCcw size={20} color='#fff' />
-					</TouchableOpacity>
-				</Animated.View>
+				<View style={styles.buttonGroup}>
+					<IconButton
+						icon={BarChart2}
+						onPress={() => router.push('/stats')}
+						color='#60a5fa'
+					/>
+					<IconButton
+						icon={Settings}
+						onPress={() => router.push('/settings')}
+						color='#f59e0b'
+					/>
+					<Animated.View style={resetButtonStyle}>
+						<TouchableOpacity
+							style={styles.resetButton}
+							onPress={handleReset}
+							activeOpacity={0.8}
+						>
+							<RotateCcw size={20} color='#fff' />
+						</TouchableOpacity>
+					</Animated.View>
+				</View>
 			</View>
 
 			<View style={styles.scoreContainer}>
@@ -112,7 +136,6 @@ const styles = StyleSheet.create({
 	titleSection: {
 		flex: 1,
 	},
-
 	statusContainer: {
 		backgroundColor: 'rgba(96, 165, 250, 0.2)',
 		paddingHorizontal: 12,
@@ -124,6 +147,20 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		fontFamily: 'Inter-SemiBold',
 		color: '#60a5fa',
+	},
+	buttonGroup: {
+		flexDirection: 'row',
+		gap: 8,
+		alignItems: 'center',
+	},
+	iconButton: {
+		backgroundColor: 'rgba(255, 255, 255, 0.1)',
+		width: 44,
+		height: 44,
+		borderRadius: 22,
+		justifyContent: 'center',
+		alignItems: 'center',
+		borderWidth: 1,
 	},
 	resetButton: {
 		backgroundColor: 'rgba(255, 255, 255, 0.1)',
