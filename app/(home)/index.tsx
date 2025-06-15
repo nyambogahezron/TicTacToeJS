@@ -1,15 +1,28 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import GameBoard from '@/components/GameBoard';
 import GameHeader from '@/components/GameHeader';
-import GameProvider from '@/context/GameProvider';
 import GameOverPopup from '@/components/GameOverPopup';
+import CoinPopup from '@/components/CoinPopup';
 import { useGame } from '@/context/GameProvider';
+import { useTheme } from '@/context/ThemeProvider';
 
-function GameScreenContent() {
+export default function GameScreen() {
 	const { state, dispatch } = useGame();
+	const { colors } = useTheme();
+	const [coinPopup, setCoinPopup] = useState<{ amount: number } | null>(null);
+	const [prevCoins, setPrevCoins] = useState(state.coins);
+
+	// Track coin changes and show popup
+	useEffect(() => {
+		if (state.coins > prevCoins) {
+			const earnedCoins = state.coins - prevCoins;
+			setCoinPopup({ amount: earnedCoins });
+		}
+		setPrevCoins(state.coins);
+	}, [state.coins]);
 
 	const handleOverlayPress = () => {
 		if (state.winner) {
@@ -17,11 +30,12 @@ function GameScreenContent() {
 		}
 	};
 
+	const handleCoinPopupComplete = useCallback(() => {
+		setCoinPopup(null);
+	}, []);
+
 	return (
-		<LinearGradient
-			colors={['#0f172a', '#1e293b', '#334155']}
-			style={styles.container}
-		>
+		<LinearGradient colors={colors.background} style={styles.container}>
 			<SafeAreaView style={styles.safeArea}>
 				<TouchableOpacity
 					style={styles.content}
@@ -31,17 +45,16 @@ function GameScreenContent() {
 					<GameHeader />
 					<GameBoard />
 					<GameOverPopup />
+					{coinPopup && (
+						<CoinPopup
+							key={coinPopup.amount}
+							amount={coinPopup.amount}
+							onComplete={handleCoinPopupComplete}
+						/>
+					)}
 				</TouchableOpacity>
 			</SafeAreaView>
 		</LinearGradient>
-	);
-}
-
-export default function GameScreen() {
-	return (
-		<GameProvider>
-			<GameScreenContent />
-		</GameProvider>
 	);
 }
 

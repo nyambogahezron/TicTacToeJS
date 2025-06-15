@@ -1,15 +1,18 @@
 import React from 'react';
-import { View, Text, StyleSheet, Switch } from 'react-native';
+import { View, Text, StyleSheet, Switch, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { Volume2, Vibrate, Bot, Moon } from 'lucide-react-native';
+import { Volume2, Vibrate, Bot, Moon, ArrowLeft } from 'lucide-react-native';
 import { useAudio } from '@/context/AudioProvider';
+import { useTheme } from '@/context/ThemeProvider';
+import { useRouter } from 'expo-router';
 
 export default function SettingsScreen() {
 	const { soundEnabled, hapticEnabled, toggleSound, toggleHaptic } = useAudio();
+	const { isDarkMode, toggleTheme, colors } = useTheme();
+	const router = useRouter();
 	const [aiDifficulty, setAiDifficulty] = React.useState(true);
-	const [darkMode, setDarkMode] = React.useState(true);
 
 	const SettingItem = ({
 		icon: Icon,
@@ -21,14 +24,20 @@ export default function SettingsScreen() {
 	}: any) => (
 		<Animated.View
 			entering={FadeInUp.delay(200).springify()}
-			style={styles.settingCard}
+			style={[styles.settingCard, { backgroundColor: colors.card }]}
 		>
 			<View style={styles.settingIcon}>
 				<Icon size={24} color={color} />
 			</View>
 			<View style={styles.settingContent}>
-				<Text style={styles.settingTitle}>{title}</Text>
-				<Text style={styles.settingDescription}>{description}</Text>
+				<Text style={[styles.settingTitle, { color: colors.cardText }]}>
+					{title}
+				</Text>
+				<Text
+					style={[styles.settingDescription, { color: colors.cardSubtext }]}
+				>
+					{description}
+				</Text>
 			</View>
 			<Switch
 				value={value}
@@ -40,15 +49,25 @@ export default function SettingsScreen() {
 	);
 
 	return (
-		<LinearGradient
-			colors={['#0f172a', '#1e293b', '#334155']}
-			style={styles.container}
-		>
+		<LinearGradient colors={colors.background} style={styles.container}>
 			<SafeAreaView style={styles.safeArea}>
 				<View style={styles.content}>
-					<Animated.Text entering={FadeInUp.springify()} style={styles.title}>
-						Settings
-					</Animated.Text>
+					<View style={styles.header}>
+						<TouchableOpacity
+							style={styles.backButton}
+							onPress={() => router.back()}
+							activeOpacity={0.8}
+						>
+							<ArrowLeft size={24} color={colors.text} />
+						</TouchableOpacity>
+						<Animated.Text
+							entering={FadeInUp.springify()}
+							style={[styles.title, { color: colors.text }]}
+						>
+							Settings
+						</Animated.Text>
+						<View style={styles.backButton} />
+					</View>
 
 					<View style={styles.settingsContainer}>
 						<SettingItem
@@ -79,8 +98,8 @@ export default function SettingsScreen() {
 							icon={Moon}
 							title='Dark Mode'
 							description='Use dark theme'
-							value={darkMode}
-							onValueChange={setDarkMode}
+							value={isDarkMode}
+							onValueChange={toggleTheme}
 							color='#60a5fa'
 						/>
 					</View>
@@ -102,18 +121,27 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 20,
 		paddingTop: 20,
 	},
+	header: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+		marginBottom: 40,
+	},
+	backButton: {
+		width: 40,
+		height: 40,
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
 	title: {
 		fontSize: 32,
 		fontFamily: 'Inter-Bold',
-		color: '#fff',
 		textAlign: 'center',
-		marginBottom: 40,
 	},
 	settingsContainer: {
 		gap: 16,
 	},
 	settingCard: {
-		backgroundColor: 'rgba(255, 255, 255, 0.1)',
 		borderRadius: 16,
 		padding: 20,
 		flexDirection: 'row',
@@ -129,12 +157,10 @@ const styles = StyleSheet.create({
 	settingTitle: {
 		fontSize: 18,
 		fontFamily: 'Inter-SemiBold',
-		color: '#fff',
 		marginBottom: 4,
 	},
 	settingDescription: {
 		fontSize: 14,
 		fontFamily: 'Inter-Regular',
-		color: '#94a3b8',
 	},
 });

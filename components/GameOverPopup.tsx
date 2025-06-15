@@ -13,12 +13,14 @@ import Animated, {
 import { Trophy, XCircle, Handshake } from 'lucide-react-native';
 import { useGame } from '../context/GameProvider';
 import { useAudio } from '../context/AudioProvider';
+import { useTheme } from '@/context/ThemeProvider';
 
 const { width } = Dimensions.get('window');
 
 export default function GameOverPopup() {
 	const { state } = useGame();
 	const { playSound, triggerHaptic } = useAudio();
+	const { colors } = useTheme();
 	const scale = useSharedValue(0.8);
 
 	useEffect(() => {
@@ -71,13 +73,24 @@ export default function GameOverPopup() {
 				<Animated.View
 					entering={SlideInDown.springify()}
 					exiting={SlideOutDown.springify()}
-					style={[styles.popup, animatedStyle, { borderColor: getColor() }]}
+					style={[
+						styles.popup,
+						animatedStyle,
+						{
+							backgroundColor: colors.card,
+							borderColor: getColor(),
+						},
+					]}
 				>
-					<View style={styles.iconContainer}>{getIcon()}</View>
+					<View
+						style={[styles.iconContainer, { backgroundColor: colors.border }]}
+					>
+						{getIcon()}
+					</View>
 					<Text style={[styles.message, { color: getColor() }]}>
 						{getMessage()}
 					</Text>
-					<Text style={styles.subMessage}>
+					<Text style={[styles.subMessage, { color: colors.cardSubtext }]}>
 						{state.winner === 'draw'
 							? 'Great game! Try again?'
 							: 'Tap anywhere to play again'}
@@ -102,7 +115,6 @@ const styles = StyleSheet.create({
 	},
 	popup: {
 		width: width - 40,
-		backgroundColor: 'rgba(15, 23, 42, 0.95)',
 		borderRadius: 24,
 		padding: 24,
 		alignItems: 'center',
@@ -117,7 +129,6 @@ const styles = StyleSheet.create({
 		width: 80,
 		height: 80,
 		borderRadius: 40,
-		backgroundColor: 'rgba(255, 255, 255, 0.1)',
 		justifyContent: 'center',
 		alignItems: 'center',
 		marginBottom: 16,
@@ -131,7 +142,6 @@ const styles = StyleSheet.create({
 	subMessage: {
 		fontSize: 16,
 		fontFamily: 'Inter-SemiBold',
-		color: '#94a3b8',
 		textAlign: 'center',
 	},
 });

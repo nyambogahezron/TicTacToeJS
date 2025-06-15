@@ -1,12 +1,18 @@
 import React from 'react';
 import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useTheme } from '@/context/ThemeProvider';
 
 export default function HomeLayout() {
+	const { isDarkMode } = useTheme();
 	return (
-		<Stack
-			screenOptions={{
-				headerShown: false,
-			}}
-		/>
+		<>
+			<StatusBar style={isDarkMode ? 'light' : 'dark'} />
+			<Stack
+				screenOptions={{
+					headerShown: false,
+				}}
+			/>
+		</>
 	);
 }

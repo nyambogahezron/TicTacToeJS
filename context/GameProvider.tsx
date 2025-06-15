@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, {
+	createContext,
+	useContext,
+	useReducer,
+	ReactNode,
+	useEffect,
+} from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Player = 'X' | 'O' | null;
 type GameMode = 'vsAI' | 'vsPlayer';
@@ -14,13 +21,17 @@ interface GameState {
 		draws: number;
 	};
 	isGameActive: boolean;
+	coins: number;
+	consecutiveWins: number;
+	isFirstTime: boolean;
 }
 
 type GameAction =
 	| { type: 'MAKE_MOVE'; index: number }
 	| { type: 'RESET_GAME' }
 	| { type: 'SET_GAME_MODE'; mode: GameMode }
-	| { type: 'AI_MOVE'; index: number };
+	| { type: 'AI_MOVE'; index: number }
+	| { type: 'INITIALIZE_COINS' };
 
 const initialState: GameState = {
 	board: Array(9).fill(null),
@@ -29,6 +40,9 @@ const initialState: GameState = {
 	gameMode: 'vsAI',
 	score: { X: 0, O: 0, draws: 0 },
 	isGameActive: true,
+	coins: 0,
+	consecutiveWins: 0,
+	isFirstTime: true,
 };
 
 const GameContext = createContext<{
@@ -130,11 +144,33 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
 			const winner = checkWinner(newBoard);
 			let newScore = { ...state.score };
+			let newCoins = state.coins;
+			let newConsecutiveWins = state.consecutiveWins;
+			let isFirstTime = state.isFirstTime;
 
-			if (winner === 'X' || winner === 'O') {
-				newScore[winner]++;
+			if (winner === 'X') {
+				newScore.X++;
+				newCoins += 3; // Award 3 coins for winning
+				newConsecutiveWins++;
+
+				// Award 3 bonus coins for 3 consecutive wins
+				if (newConsecutiveWins === 3) {
+					newCoins += 3;
+					newConsecutiveWins = 0;
+				}
+			} else if (winner === 'O') {
+				newScore.O++;
+				newConsecutiveWins = 0;
 			} else if (winner === 'draw') {
 				newScore.draws++;
+				newCoins += 1; // Award 1 coin for draw
+				newConsecutiveWins = 0;
+			}
+
+			// Award welcome coins for first time
+			if (isFirstTime) {
+				newCoins += 10;
+				isFirstTime = false;
 			}
 
 			return {
@@ -144,6 +180,9 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 				winner,
 				score: newScore,
 				isGameActive: winner === null,
+				coins: newCoins,
+				consecutiveWins: newConsecutiveWins,
+				isFirstTime,
 			};
 		}
 
@@ -157,11 +196,33 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
 			const winner = checkWinner(newBoard);
 			let newScore = { ...state.score };
+			let newCoins = state.coins;
+			let newConsecutiveWins = state.consecutiveWins;
+			let isFirstTime = state.isFirstTime;
 
-			if (winner === 'X' || winner === 'O') {
-				newScore[winner]++;
+			if (winner === 'X') {
+				newScore.X++;
+				newCoins += 3; // Award 3 coins for winning
+				newConsecutiveWins++;
+
+				// Award 3 bonus coins for 3 consecutive wins
+				if (newConsecutiveWins === 3) {
+					newCoins += 3;
+					newConsecutiveWins = 0;
+				}
+			} else if (winner === 'O') {
+				newScore.O++;
+				newConsecutiveWins = 0;
 			} else if (winner === 'draw') {
 				newScore.draws++;
+				newCoins += 1; // Award 1 coin for draw
+				newConsecutiveWins = 0;
+			}
+
+			// Award welcome coins for first time
+			if (isFirstTime) {
+				newCoins += 10;
+				isFirstTime = false;
 			}
 
 			return {
@@ -171,6 +232,9 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 				winner,
 				score: newScore,
 				isGameActive: winner === null,
+				coins: newCoins,
+				consecutiveWins: newConsecutiveWins,
+				isFirstTime,
 			};
 		}
 
@@ -190,6 +254,14 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 				score: state.score,
 			};
 
+		case 'INITIALIZE_COINS': {
+			return {
+				...state,
+				coins: 10,
+				isFirstTime: false,
+			};
+		}
+
 		default:
 			return state;
 	}
@@ -197,6 +269,45 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
 export default function GameProvider({ children }: { children: ReactNode }) {
 	const [state, dispatch] = useReducer(gameReducer, initialState);
+
+	// Load saved game state
+	useEffect(() => {
+		const loadGameState = async () => {
+			try {
+				const savedState = await AsyncStorage.getItem('gameState');
+				if (savedState) {
+					const parsedState = JSON.parse(savedState);
+					// Only restore coins and isFirstTime from saved state
+					if (parsedState.coins !== undefined) {
+						dispatch({ type: 'INITIALIZE_COINS' });
+					}
+				}
+			} catch (error) {
+				console.error('Error loading game state:', error);
+			}
+		};
+
+		loadGameState();
+	}, []);
+
+	// Save game state when coins change
+	useEffect(() => {
+		const saveGameState = async () => {
+			try {
+				await AsyncStorage.setItem(
+					'gameState',
+					JSON.stringify({
+						coins: state.coins,
+						isFirstTime: state.isFirstTime,
+					})
+				);
+			} catch (error) {
+				console.error('Error saving game state:', error);
+			}
+		};
+
+		saveGameState();
+	}, [state.coins, state.isFirstTime]);
 
 	// AI move logic
 	React.useEffect(() => {
