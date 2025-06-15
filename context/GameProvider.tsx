@@ -5,7 +5,12 @@ import React, {
 	ReactNode,
 	useEffect,
 } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+	getCoins,
+	updateCoins,
+	getStats,
+	updateStats,
+} from '@/services/database';
 
 type Player = 'X' | 'O' | null;
 type GameMode = 'vsAI' | 'vsPlayer';
@@ -31,7 +36,8 @@ type GameAction =
 	| { type: 'RESET_GAME' }
 	| { type: 'SET_GAME_MODE'; mode: GameMode }
 	| { type: 'AI_MOVE'; index: number }
-	| { type: 'INITIALIZE_COINS' };
+	| { type: 'INITIALIZE_COINS' }
+	| { type: 'SET_STATS'; stats: { X: number; O: number; draws: number } };
 
 const initialState: GameState = {
 	board: Array(9).fill(null),
@@ -262,6 +268,12 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 			};
 		}
 
+		case 'SET_STATS':
+			return {
+				...state,
+				score: action.stats,
+			};
+
 		default:
 			return state;
 	}
@@ -270,17 +282,31 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 export default function GameProvider({ children }: { children: ReactNode }) {
 	const [state, dispatch] = useReducer(gameReducer, initialState);
 
-	// Load saved game state
+	// Load saved game state from database
 	useEffect(() => {
 		const loadGameState = async () => {
 			try {
-				const savedState = await AsyncStorage.getItem('gameState');
-				if (savedState) {
-					const parsedState = JSON.parse(savedState);
-					// Only restore coins and isFirstTime from saved state
-					if (parsedState.coins !== undefined) {
-						dispatch({ type: 'INITIALIZE_COINS' });
-					}
+				// Load coins
+				const coins = await getCoins();
+				if (coins > 0) {
+					dispatch({ type: 'INITIALIZE_COINS' });
+				}
+
+				// Load stats
+				const stats = await getStats();
+				if (stats) {
+					const totalGames = stats.gamesPlayed;
+					const wins = stats.gamesWon;
+					const draws = totalGames - wins - (stats.totalScore - wins); // Calculate draws from total games and wins
+
+					dispatch({
+						type: 'SET_STATS',
+						stats: {
+							X: wins,
+							O: totalGames - wins - draws,
+							draws: draws,
+						},
+					});
 				}
 			} catch (error) {
 				console.error('Error loading game state:', error);
@@ -290,24 +316,30 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 		loadGameState();
 	}, []);
 
-	// Save game state when coins change
+	// Save game state to database when it changes
 	useEffect(() => {
 		const saveGameState = async () => {
 			try {
-				await AsyncStorage.setItem(
-					'gameState',
-					JSON.stringify({
-						coins: state.coins,
-						isFirstTime: state.isFirstTime,
-					})
-				);
+				// Save coins
+				await updateCoins(state.coins);
+
+				// Calculate total games
+				const totalGames = state.score.X + state.score.O + state.score.draws;
+
+				// Save stats
+				await updateStats({
+					gamesPlayed: totalGames,
+					gamesWon: state.score.X,
+					highestScore: Math.max(state.score.X, state.score.O),
+					totalScore: totalGames,
+				});
 			} catch (error) {
 				console.error('Error saving game state:', error);
 			}
 		};
 
 		saveGameState();
-	}, [state.coins, state.isFirstTime]);
+	}, [state.coins, state.score]);
 
 	// AI move logic
 	React.useEffect(() => {

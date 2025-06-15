@@ -42,23 +42,24 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 	useEffect(() => {
 		const loadSounds = async () => {
 			try {
-				const moveSound = new Audio.Sound();
-				const winSound = new Audio.Sound();
-				const drawSound = new Audio.Sound();
-				const resetSound = new Audio.Sound();
-
-				await Promise.all([
-					moveSound.loadAsync(require('../assets/sounds/move.mp3')),
-					winSound.loadAsync(require('../assets/sounds/win.mp3')),
-					drawSound.loadAsync(require('../assets/sounds/draw.mp3')),
-					resetSound.loadAsync(require('../assets/sounds/reset.mp3')),
-				]);
+				const moveSound = await Audio.Sound.createAsync(
+					require('../assets/sounds/move.mp3')
+				);
+				const winSound = await Audio.Sound.createAsync(
+					require('../assets/sounds/win.mp3')
+				);
+				const drawSound = await Audio.Sound.createAsync(
+					require('../assets/sounds/draw.mp3')
+				);
+				const resetSound = await Audio.Sound.createAsync(
+					require('../assets/sounds/reset.mp3')
+				);
 
 				setSounds({
-					move: moveSound,
-					win: winSound,
-					draw: drawSound,
-					reset: resetSound,
+					move: moveSound.sound,
+					win: winSound.sound,
+					draw: drawSound.sound,
+					reset: resetSound.sound,
 				});
 			} catch (error) {
 				console.error('Error loading sounds:', error);
@@ -99,7 +100,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 		if (!soundEnabled || !sounds[type]) return;
 
 		try {
-			await sounds[type].replayAsync();
+			await sounds[type].setPositionAsync(0);
+			await sounds[type].playAsync();
 		} catch (error) {
 			console.error('Error playing sound:', error);
 		}
