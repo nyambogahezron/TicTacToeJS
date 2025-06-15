@@ -9,10 +9,12 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useGame } from '../context/GameProvider';
 import { useRouter } from 'expo-router';
+import { useTheme } from '@/context/ThemeProvider';
 
 export default function GameHeader() {
 	const { state, dispatch } = useGame();
 	const router = useRouter();
+	const { colors } = useTheme();
 	const scale = useSharedValue(1);
 
 	const resetButtonStyle = useAnimatedStyle(() => ({
@@ -42,9 +44,9 @@ export default function GameHeader() {
 		return '#60a5fa';
 	};
 
-	const IconButton = ({ icon: Icon, onPress, color = '#fff' }: any) => (
+	const IconButton = ({ icon: Icon, onPress, color = colors.text }: any) => (
 		<TouchableOpacity
-			style={[styles.iconButton, { borderColor: 'rgba(255, 255, 255, 0.2)' }]}
+			style={[styles.iconButton, { borderColor: colors.border }]}
 			onPress={onPress}
 			activeOpacity={0.8}
 		>
@@ -81,29 +83,41 @@ export default function GameHeader() {
 					/>
 					<Animated.View style={resetButtonStyle}>
 						<TouchableOpacity
-							style={styles.resetButton}
+							style={[styles.resetButton, { borderColor: colors.border }]}
 							onPress={handleReset}
 							activeOpacity={0.8}
 						>
-							<RotateCcw size={20} color='#fff' />
+							<RotateCcw size={20} color={colors.text} />
 						</TouchableOpacity>
 					</Animated.View>
 				</View>
 			</View>
 
-			<View style={styles.scoreContainer}>
+			<View
+				style={[
+					styles.scoreContainer,
+					{
+						backgroundColor: colors.card,
+						borderColor: colors.border,
+					},
+				]}
+			>
 				<View style={styles.scoreItem}>
 					<View style={[styles.scoreIcon, { backgroundColor: '#10b981' }]}>
 						<User size={16} color='#fff' />
 					</View>
-					<Text style={styles.scoreText}>You: {state.score.X}</Text>
+					<Text style={[styles.scoreText, { color: colors.cardSubtext }]}>
+						You: {state.score.X}
+					</Text>
 				</View>
 
 				<View style={styles.scoreItem}>
 					<View style={[styles.scoreIcon, { backgroundColor: '#f59e0b' }]}>
 						<Text style={styles.drawText}>D</Text>
 					</View>
-					<Text style={styles.scoreText}>Draw: {state.score.draws}</Text>
+					<Text style={[styles.scoreText, { color: colors.cardSubtext }]}>
+						Draw: {state.score.draws}
+					</Text>
 				</View>
 
 				<View style={styles.scoreItem}>
@@ -114,7 +128,7 @@ export default function GameHeader() {
 							<User size={16} color='#fff' />
 						)}
 					</View>
-					<Text style={styles.scoreText}>
+					<Text style={[styles.scoreText, { color: colors.cardSubtext }]}>
 						{state.gameMode === 'vsAI' ? 'AI' : 'Player 2'}: {state.score.O}
 					</Text>
 				</View>
@@ -137,7 +151,6 @@ const styles = StyleSheet.create({
 		flex: 1,
 	},
 	statusContainer: {
-		backgroundColor: 'rgba(96, 165, 250, 0.2)',
 		paddingHorizontal: 12,
 		paddingVertical: 6,
 		borderRadius: 20,
@@ -146,7 +159,6 @@ const styles = StyleSheet.create({
 	status: {
 		fontSize: 14,
 		fontFamily: 'Inter-SemiBold',
-		color: '#60a5fa',
 	},
 	buttonGroup: {
 		flexDirection: 'row',
@@ -170,16 +182,13 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 		alignItems: 'center',
 		borderWidth: 1,
-		borderColor: 'rgba(255, 255, 255, 0.2)',
 	},
 	scoreContainer: {
 		flexDirection: 'row',
 		justifyContent: 'space-between',
-		backgroundColor: 'rgba(255, 255, 255, 0.05)',
 		borderRadius: 16,
 		padding: 16,
 		borderWidth: 1,
-		borderColor: 'rgba(255, 255, 255, 0.1)',
 	},
 	scoreItem: {
 		alignItems: 'center',
@@ -201,7 +210,6 @@ const styles = StyleSheet.create({
 	scoreText: {
 		fontSize: 12,
 		fontFamily: 'Inter-SemiBold',
-		color: '#94a3b8',
 		textAlign: 'center',
 	},
 });

@@ -3,6 +3,7 @@ import { Dimensions, StyleSheet, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import GameCell from './GameCell';
 import { useGame } from '../context/GameProvider';
+import { useTheme } from '@/context/ThemeProvider';
 
 const { width } = Dimensions.get('window');
 const boardSize = Math.min(width - 30, 400);
@@ -10,12 +11,21 @@ const cellSize = (boardSize - 20) / 3.2;
 
 export default function GameBoard() {
 	const { state } = useGame();
+	const { colors } = useTheme();
 
 	return (
 		<View style={styles.container}>
 			<Animated.View
 				entering={FadeInUp.delay(200).springify()}
-				style={[styles.board, { width: boardSize, height: boardSize }]}
+				style={[
+					styles.board,
+					{
+						width: boardSize,
+						height: boardSize,
+						backgroundColor: colors.card,
+						borderColor: colors.border,
+					},
+				]}
 			>
 				{state.board.map((cell, index) => (
 					<GameCell
@@ -41,7 +51,6 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 	},
 	board: {
-		backgroundColor: 'rgba(255, 255, 255, 0.05)',
 		borderRadius: 20,
 		padding: 10,
 		gap: 5,
@@ -51,6 +60,5 @@ const styles = StyleSheet.create({
 		justifyContent: 'space-between',
 		alignContent: 'center',
 		borderWidth: 2,
-		borderColor: 'rgba(255, 255, 255, 0.1)',
 	},
 });

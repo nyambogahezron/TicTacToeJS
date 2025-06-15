@@ -6,9 +6,10 @@ import {
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { AudioProvider } from '@/context/AudioProvider';
+import { ThemeProvider } from '@/context/ThemeProvider';
+import GameProvider from '@/context/GameProvider';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -30,12 +31,15 @@ export default function RootLayout() {
 	}
 
 	return (
-		<AudioProvider>
-			<Stack screenOptions={{ headerShown: false }}>
-				<Stack.Screen name='(home)' />
-				<Stack.Screen name='+not-found' />
-			</Stack>
-			<StatusBar style='auto' />
-		</AudioProvider>
+		<ThemeProvider>
+			<GameProvider>
+				<AudioProvider>
+					<Stack screenOptions={{ headerShown: false }}>
+						<Stack.Screen name='(home)' />
+						<Stack.Screen name='+not-found' />
+					</Stack>
+				</AudioProvider>
+			</GameProvider>
+		</ThemeProvider>
 	);
 }
