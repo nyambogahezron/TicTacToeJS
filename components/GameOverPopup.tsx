@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, Text, View, Dimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Animated, {
@@ -11,17 +11,32 @@ import Animated, {
 	withSpring,
 } from 'react-native-reanimated';
 import { Trophy, XCircle, Handshake } from 'lucide-react-native';
-import { useGame } from './GameProvider';
+import { useGame } from '../context/GameProvider';
+import { useAudio } from '../context/AudioProvider';
 
 const { width } = Dimensions.get('window');
 
 export default function GameOverPopup() {
 	const { state } = useGame();
+	const { playSound, triggerHaptic } = useAudio();
 	const scale = useSharedValue(0.8);
 
-	React.useEffect(() => {
+	useEffect(() => {
 		if (state.winner) {
 			scale.value = withSpring(1, { damping: 15 });
+
+			// Play appropriate sound and haptic based on game outcome
+			const playGameEndEffects = async () => {
+				if (state.winner === 'X') {
+					await Promise.all([playSound('win'), triggerHaptic('success')]);
+				} else if (state.winner === 'O') {
+					await Promise.all([playSound('win'), triggerHaptic('error')]);
+				} else {
+					await Promise.all([playSound('draw'), triggerHaptic('medium')]);
+				}
+			};
+
+			playGameEndEffects();
 		}
 	}, [state.winner]);
 

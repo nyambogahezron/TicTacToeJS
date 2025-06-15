@@ -8,6 +8,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { AudioProvider } from '@/context/AudioProvider';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -29,12 +30,12 @@ export default function RootLayout() {
 	}
 
 	return (
-		<>
+		<AudioProvider>
 			<Stack screenOptions={{ headerShown: false }}>
 				<Stack.Screen name='(home)' />
 				<Stack.Screen name='+not-found' />
 			</Stack>
 			<StatusBar style='auto' />
-		</>
+		</AudioProvider>
 	);
 }

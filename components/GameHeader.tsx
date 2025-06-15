@@ -7,7 +7,7 @@ import Animated, {
 	useSharedValue,
 	withSpring,
 } from 'react-native-reanimated';
-import { useGame } from './GameProvider';
+import { useGame } from '../context/GameProvider';
 import { useRouter } from 'expo-router';
 
 export default function GameHeader() {

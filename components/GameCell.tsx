@@ -8,7 +8,8 @@ import Animated, {
 	withSequence,
 	withSpring,
 } from 'react-native-reanimated';
-import { useGame } from './GameProvider';
+import { useGame } from '../context/GameProvider';
+import { useAudio } from '../context/AudioProvider';
 
 interface GameCellProps {
 	index: number;
@@ -24,6 +25,7 @@ export default function GameCell({
 	disabled,
 }: GameCellProps) {
 	const { dispatch } = useGame();
+	const { playSound, triggerHaptic } = useAudio();
 	const scale = useSharedValue(1);
 	const rotate = useSharedValue(0);
 	const opacity = useSharedValue(value ? 1 : 0);
@@ -53,7 +55,7 @@ export default function GameCell({
 		}
 	}, [value]);
 
-	const handlePress = () => {
+	const handlePress = async () => {
 		if (disabled || value) return;
 
 		scale.value = withSequence(
@@ -61,7 +63,7 @@ export default function GameCell({
 			withSpring(1, { damping: 15 })
 		);
 
-		runOnJS(triggerHapticFeedback)();
+		await Promise.all([playSound('move'), triggerHaptic('medium')]);
 
 		setTimeout(() => {
 			dispatch({ type: 'MAKE_MOVE', index });

@@ -4,9 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import GameBoard from '@/components/GameBoard';
 import GameHeader from '@/components/GameHeader';
-import GameProvider from '@/components/GameProvider';
+import GameProvider from '@/context/GameProvider';
 import GameOverPopup from '@/components/GameOverPopup';
-import { useGame } from '@/components/GameProvider';
+import { useGame } from '@/context/GameProvider';
 
 function GameScreenContent() {
 	const { state, dispatch } = useGame();

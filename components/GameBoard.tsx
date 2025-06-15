@@ -2,7 +2,7 @@ import React from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import GameCell from './GameCell';
-import { useGame } from './GameProvider';
+import { useGame } from '../context/GameProvider';
 
 const { width } = Dimensions.get('window');
 const boardSize = Math.min(width - 30, 400);
