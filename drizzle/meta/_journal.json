@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1750056994572,
+      "tag": "0000_smart_vindicator",
+      "breakpoints": true
+    }
+  ]
+}

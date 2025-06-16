@@ -10,8 +10,15 @@ import { useEffect } from 'react';
 import { AudioProvider } from '@/context/AudioProvider';
 import { ThemeProvider } from '@/context/ThemeProvider';
 import GameProvider from '@/context/GameProvider';
+import * as SQLite from 'expo-sqlite';
+import { drizzle } from 'drizzle-orm/expo-sqlite';
 
 SplashScreen.preventAutoHideAsync();
+
+// connect to drizzle DB
+const expo = SQLite.openDatabaseSync('db.db');
+
+export const db = drizzle(expo);
 
 export default function RootLayout() {
 	const [fontsLoaded, fontError] = useFonts({

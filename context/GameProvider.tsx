@@ -4,6 +4,7 @@ import React, {
 	useReducer,
 	ReactNode,
 	useEffect,
+	useState,
 } from 'react';
 import {
 	getCoins,
@@ -37,7 +38,8 @@ type GameAction =
 	| { type: 'SET_GAME_MODE'; mode: GameMode }
 	| { type: 'AI_MOVE'; index: number }
 	| { type: 'INITIALIZE_COINS' }
-	| { type: 'SET_STATS'; stats: { X: number; O: number; draws: number } };
+	| { type: 'SET_STATS'; stats: { X: number; O: number; draws: number } }
+	| { type: 'SET_COINS'; coins: number };
 
 const initialState: GameState = {
 	board: Array(9).fill(null),
@@ -274,6 +276,12 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 				score: action.stats,
 			};
 
+		case 'SET_COINS':
+			return {
+				...state,
+				coins: action.coins,
+			};
+
 		default:
 			return state;
 	}
@@ -281,15 +289,17 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
 export default function GameProvider({ children }: { children: ReactNode }) {
 	const [state, dispatch] = useReducer(gameReducer, initialState);
+	const [isLoading, setIsLoading] = useState(true);
 
 	// Load saved game state from database
 	useEffect(() => {
 		const loadGameState = async () => {
 			try {
+				setIsLoading(true);
 				// Load coins
 				const coins = await getCoins();
 				if (coins > 0) {
-					dispatch({ type: 'INITIALIZE_COINS' });
+					dispatch({ type: 'SET_COINS', coins });
 				}
 
 				// Load stats
@@ -310,6 +320,8 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 				}
 			} catch (error) {
 				console.error('Error loading game state:', error);
+			} finally {
+				setIsLoading(false);
 			}
 		};
 
@@ -319,6 +331,8 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 	// Save game state to database when it changes
 	useEffect(() => {
 		const saveGameState = async () => {
+			if (isLoading) return; // Don't save while initial loading is in progress
+
 			try {
 				// Save coins
 				await updateCoins(state.coins);
@@ -339,7 +353,7 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 		};
 
 		saveGameState();
-	}, [state.coins, state.score]);
+	}, [state.coins, state.score, isLoading]);
 
 	// AI move logic
 	React.useEffect(() => {
@@ -369,6 +383,10 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 			return () => clearTimeout(timer);
 		}
 	}, [state.winner, dispatch]);
+
+	if (isLoading) {
+		return null; // Or a loading spinner if you prefer
+	}
 
 	return (
 		<GameContext.Provider value={{ state, dispatch }}>
