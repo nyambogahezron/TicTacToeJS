@@ -17,6 +17,7 @@ import {
 
 type Player = 'X' | 'O' | null;
 type GameMode = 'vsAI' | 'vsPlayer';
+type GamePhase = 'placement' | 'movement';
 
 interface GameState {
 	board: Player[];
@@ -32,13 +33,27 @@ interface GameState {
 	coins: number;
 	consecutiveWins: number;
 	isFirstTime: boolean;
+	gamePhase: GamePhase;
+	piecesPlaced: {
+		X: number;
+		O: number;
+	};
+	selectedPiece: number | null;
+	moveHistory: {
+		from: number;
+		to: number;
+		player: Player;
+	}[];
 }
 
 type GameAction =
 	| { type: 'MAKE_MOVE'; index: number }
+	| { type: 'SELECT_PIECE'; index: number }
+	| { type: 'MOVE_PIECE'; from: number; to: number }
 	| { type: 'RESET_GAME' }
 	| { type: 'SET_GAME_MODE'; mode: GameMode }
 	| { type: 'AI_MOVE'; index: number }
+	| { type: 'AI_MOVE_PIECE'; from: number; to: number }
 	| { type: 'INITIALIZE_COINS' }
 	| { type: 'SET_STATS'; stats: { X: number; O: number; draws: number } }
 	| { type: 'SET_COINS'; coins: number }
@@ -54,6 +69,10 @@ const initialState: GameState = {
 	coins: 0,
 	consecutiveWins: 0,
 	isFirstTime: true,
+	gamePhase: 'placement',
+	piecesPlaced: { X: 0, O: 0 },
+	selectedPiece: null,
+	moveHistory: [],
 };
 
 const GameContext = createContext<{
@@ -80,189 +99,232 @@ const checkWinner = (board: Player[]): Player | 'draw' | null => {
 		}
 	}
 
-	if (board.every((cell) => cell !== null)) {
-		return 'draw';
+	return null;
+};
+
+// Get adjacent cells for movement phase
+const getAdjacentCells = (index: number): number[] => {
+	const adjacencyMap: { [key: number]: number[] } = {
+		0: [1, 3, 4],
+		1: [0, 2, 3, 4, 5],
+		2: [1, 4, 5],
+		3: [0, 1, 4, 6, 7],
+		4: [0, 1, 2, 3, 5, 6, 7, 8],
+		5: [1, 2, 4, 7, 8],
+		6: [3, 4, 7],
+		7: [3, 4, 5, 6, 8],
+		8: [4, 5, 7],
+	};
+	return adjacencyMap[index] || [];
+};
+
+// Check if a move creates a repeated position (for draw detection)
+const isRepeatingPosition = (
+	moveHistory: { from: number; to: number; player: Player }[],
+	currentBoard: Player[]
+): boolean => {
+	if (moveHistory.length < 6) return false; // Need at least 3 moves per player
+
+	// Check if the last 4 moves create a cycle (2 moves per player back and forth)
+	const lastMoves = moveHistory.slice(-4);
+	if (lastMoves.length === 4) {
+		const [move1, move2, move3, move4] = lastMoves;
+		// Check if players are just moving pieces back and forth
+		return (
+			move1.from === move3.to &&
+			move1.to === move3.from &&
+			move2.from === move4.to &&
+			move2.to === move4.from
+		);
+	}
+
+	return false;
+};
+
+const checkDraw = (
+	board: Player[],
+	moveHistory: { from: number; to: number; player: Player }[],
+	gamePhase: GamePhase
+): boolean => {
+	// In placement phase, no draws possible
+	if (gamePhase === 'placement') return false;
+
+	// Check for repeating moves (loop detection)
+	if (isRepeatingPosition(moveHistory, board)) {
+		return true;
+	}
+
+	return false; // For now, we'll rely mainly on loop detection
+};
+
+const getBestMove = (
+	board: Player[],
+	gamePhase: GamePhase,
+	piecesPlaced: { X: number; O: number }
+): number => {
+	if (gamePhase === 'placement') {
+		// Simple placement strategy: try center, then corners, then edges
+		const preferredOrder = [4, 0, 2, 6, 8, 1, 3, 5, 7];
+		for (const index of preferredOrder) {
+			if (board[index] === null) {
+				return index;
+			}
+		}
+	}
+	return -1;
+};
+
+const getBestMovePiece = (
+	board: Player[],
+	currentPlayer: Player
+): { from: number; to: number } | null => {
+	// Find all pieces belonging to current player
+	const playerPieces = board
+		.map((cell, index) => (cell === currentPlayer ? index : -1))
+		.filter((index) => index !== -1);
+
+	// Try to find a winning move
+	for (const pieceIndex of playerPieces) {
+		const adjacentCells = getAdjacentCells(pieceIndex);
+		for (const adjacentIndex of adjacentCells) {
+			if (board[adjacentIndex] === null) {
+				// Test this move
+				const testBoard = [...board];
+				testBoard[pieceIndex] = null;
+				testBoard[adjacentIndex] = currentPlayer;
+
+				if (checkWinner(testBoard) === currentPlayer) {
+					return { from: pieceIndex, to: adjacentIndex };
+				}
+			}
+		}
+	}
+
+	// Try to block opponent's winning move
+	const opponent = currentPlayer === 'X' ? 'O' : 'X';
+	const opponentPieces = board
+		.map((cell, index) => (cell === opponent ? index : -1))
+		.filter((index) => index !== -1);
+
+	for (const opponentPiece of opponentPieces) {
+		const adjacentCells = getAdjacentCells(opponentPiece);
+		for (const adjacentIndex of adjacentCells) {
+			if (board[adjacentIndex] === null) {
+				const testBoard = [...board];
+				testBoard[opponentPiece] = null;
+				testBoard[adjacentIndex] = opponent;
+
+				if (checkWinner(testBoard) === opponent) {
+					// Block by moving our piece to that position if possible
+					for (const ourPiece of playerPieces) {
+						const ourAdjacent = getAdjacentCells(ourPiece);
+						if (ourAdjacent.includes(adjacentIndex)) {
+							return { from: ourPiece, to: adjacentIndex };
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Make a random valid move
+	for (const pieceIndex of playerPieces) {
+		const adjacentCells = getAdjacentCells(pieceIndex);
+		for (const adjacentIndex of adjacentCells) {
+			if (board[adjacentIndex] === null) {
+				return { from: pieceIndex, to: adjacentIndex };
+			}
+		}
 	}
 
 	return null;
 };
 
-const getBestMove = (board: Player[]): number => {
-	// Simple AI using minimax algorithm
-	const minimax = (
-		newBoard: Player[],
-		depth: number,
-		isMaximizing: boolean
-	): number => {
-		const winner = checkWinner(newBoard);
-
-		if (winner === 'O') return 1;
-		if (winner === 'X') return -1;
-		if (winner === 'draw') return 0;
-
-		if (isMaximizing) {
-			let bestScore = -Infinity;
-			for (let i = 0; i < 9; i++) {
-				if (newBoard[i] === null) {
-					newBoard[i] = 'O';
-					const score = minimax(newBoard, depth + 1, false);
-					newBoard[i] = null;
-					bestScore = Math.max(score, bestScore);
-				}
-			}
-			return bestScore;
-		} else {
-			let bestScore = Infinity;
-			for (let i = 0; i < 9; i++) {
-				if (newBoard[i] === null) {
-					newBoard[i] = 'X';
-					const score = minimax(newBoard, depth + 1, true);
-					newBoard[i] = null;
-					bestScore = Math.min(score, bestScore);
-				}
-			}
-			return bestScore;
-		}
-	};
-
-	let bestScore = -Infinity;
-	let bestMove = -1;
-
-	for (let i = 0; i < 9; i++) {
-		if (board[i] === null) {
-			board[i] = 'O';
-			const score = minimax(board, 0, false);
-			board[i] = null;
-			if (score > bestScore) {
-				bestScore = score;
-				bestMove = i;
-			}
-		}
-	}
-
-	return bestMove;
-};
-
 function gameReducer(state: GameState, action: GameAction): GameState {
 	switch (action.type) {
 		case 'MAKE_MOVE': {
-			if (!state.isGameActive || state.board[action.index] !== null) {
-				return state;
-			}
+			if (!state.isGameActive) return state;
 
-			const newBoard = [...state.board];
-			newBoard[action.index] = state.currentPlayer;
+			// Placement phase - place pieces if player has pieces left
+			if (state.gamePhase === 'placement') {
+				if (state.board[action.index] !== null) return state;
+				if (state.piecesPlaced[state.currentPlayer!] >= 3) return state;
 
-			const winner = checkWinner(newBoard);
-			let newScore = { ...state.score };
-			let newCoins = state.coins;
-			let newConsecutiveWins = state.consecutiveWins;
-			let isFirstTime = state.isFirstTime;
+				const newBoard = [...state.board];
+				newBoard[action.index] = state.currentPlayer;
 
-			if (winner === 'X') {
-				newScore.X++;
-				newCoins += 3; // Award 3 coins for winning
-				newConsecutiveWins++;
+				const newPiecesPlaced = {
+					...state.piecesPlaced,
+					[state.currentPlayer!]: state.piecesPlaced[state.currentPlayer!] + 1,
+				};
 
-				// Award 3 bonus coins for 3 consecutive wins
-				if (newConsecutiveWins === 3) {
-					newCoins += 3;
-					newConsecutiveWins = 0;
+				// Check for winner after placement
+				const winner = checkWinner(newBoard);
+				if (winner) {
+					return updateGameEndState(state, newBoard, winner, newPiecesPlaced);
 				}
-			} else if (winner === 'O') {
-				newScore.O++;
-				newConsecutiveWins = 0;
-			} else if (winner === 'draw') {
-				newScore.draws++;
-				newCoins += 1; // Award 1 coin for draw
-				newConsecutiveWins = 0;
+
+				// Check if we should transition to movement phase
+				const shouldTransition =
+					newPiecesPlaced.X === 3 && newPiecesPlaced.O === 3;
+
+				return {
+					...state,
+					board: newBoard,
+					currentPlayer: state.currentPlayer === 'X' ? 'O' : 'X',
+					piecesPlaced: newPiecesPlaced,
+					gamePhase: shouldTransition ? 'movement' : 'placement',
+				};
 			}
 
-			// Award welcome coins for first time (only once ever)
-			if (isFirstTime) {
-				newCoins += 10;
-				isFirstTime = false;
-				// Mark welcome bonus as given in database immediately
-				setTimeout(async () => {
-					try {
-						await setWelcomeBonusGiven();
-					} catch (error) {
-						console.error('Error marking welcome bonus as given:', error);
-					}
-				}, 0);
+			// Movement phase - select piece to move
+			if (state.gamePhase === 'movement') {
+				if (state.selectedPiece === null) {
+					// Select a piece to move
+					if (state.board[action.index] !== state.currentPlayer) return state;
+					return {
+						...state,
+						selectedPiece: action.index,
+					};
+				} else {
+					// Move the selected piece
+					return handlePieceMove(state, state.selectedPiece, action.index);
+				}
 			}
+
+			return state;
+		}
+
+		case 'SELECT_PIECE': {
+			if (state.gamePhase !== 'movement' || !state.isGameActive) return state;
+			if (state.board[action.index] !== state.currentPlayer) return state;
 
 			return {
 				...state,
-				board: newBoard,
-				currentPlayer: state.currentPlayer === 'X' ? 'O' : 'X',
-				winner,
-				score: newScore,
-				isGameActive: winner === null,
-				coins: newCoins,
-				consecutiveWins: newConsecutiveWins,
-				isFirstTime,
+				selectedPiece: action.index,
 			};
 		}
 
+		case 'MOVE_PIECE': {
+			if (state.gamePhase !== 'movement' || !state.isGameActive) return state;
+			return handlePieceMove(state, action.from, action.to);
+		}
+
 		case 'AI_MOVE': {
-			if (!state.isGameActive || state.board[action.index] !== null) {
+			if (state.gameMode !== 'vsAI' || state.currentPlayer !== 'O')
 				return state;
+
+			if (state.gamePhase === 'placement') {
+				return gameReducer(state, { type: 'MAKE_MOVE', index: action.index });
 			}
 
-			const newBoard = [...state.board];
-			newBoard[action.index] = 'O';
+			return state;
+		}
 
-			const winner = checkWinner(newBoard);
-			let newScore = { ...state.score };
-			let newCoins = state.coins;
-			let newConsecutiveWins = state.consecutiveWins;
-			let isFirstTime = state.isFirstTime;
-
-			if (winner === 'X') {
-				newScore.X++;
-				newCoins += 3; // Award 3 coins for winning
-				newConsecutiveWins++;
-
-				// Award 3 bonus coins for 3 consecutive wins
-				if (newConsecutiveWins === 3) {
-					newCoins += 3;
-					newConsecutiveWins = 0;
-				}
-			} else if (winner === 'O') {
-				newScore.O++;
-				newConsecutiveWins = 0;
-			} else if (winner === 'draw') {
-				newScore.draws++;
-				newCoins += 1; // Award 1 coin for draw
-				newConsecutiveWins = 0;
-			}
-
-			// Award welcome coins for first time (only once ever)
-			if (isFirstTime) {
-				newCoins += 10;
-				isFirstTime = false;
-				// Mark welcome bonus as given in database immediately
-				setTimeout(async () => {
-					try {
-						await setWelcomeBonusGiven();
-					} catch (error) {
-						console.error('Error marking welcome bonus as given:', error);
-					}
-				}, 0);
-			}
-
-			return {
-				...state,
-				board: newBoard,
-				currentPlayer: 'X',
-				winner,
-				score: newScore,
-				isGameActive: winner === null,
-				coins: newCoins,
-				consecutiveWins: newConsecutiveWins,
-				isFirstTime,
-			};
+		case 'AI_MOVE_PIECE': {
+			if (state.gameMode !== 'vsAI' || state.currentPlayer !== 'O')
+				return state;
+			return handlePieceMove(state, action.from, action.to);
 		}
 
 		case 'RESET_GAME':
@@ -272,6 +334,10 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 				currentPlayer: 'X',
 				winner: null,
 				isGameActive: true,
+				gamePhase: 'placement',
+				piecesPlaced: { X: 0, O: 0 },
+				selectedPiece: null,
+				moveHistory: [],
 			};
 
 		case 'SET_GAME_MODE':
@@ -279,6 +345,9 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 				...initialState,
 				gameMode: action.mode,
 				score: state.score,
+				coins: state.coins,
+				consecutiveWins: state.consecutiveWins,
+				isFirstTime: state.isFirstTime,
 			};
 
 		case 'INITIALIZE_COINS': {
@@ -310,6 +379,121 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 		default:
 			return state;
 	}
+}
+
+// Helper function to handle piece movement
+function handlePieceMove(
+	state: GameState,
+	from: number,
+	to: number
+): GameState {
+	if (state.board[from] !== state.currentPlayer) return state;
+	if (state.board[to] !== null) return state;
+
+	// Check if move is to adjacent cell
+	const adjacentCells = getAdjacentCells(from);
+	if (!adjacentCells.includes(to)) return state;
+
+	const newBoard = [...state.board];
+	newBoard[from] = null;
+	newBoard[to] = state.currentPlayer;
+
+	const newMoveHistory = [
+		...state.moveHistory,
+		{ from, to, player: state.currentPlayer! },
+	];
+
+	// Check for winner
+	const winner = checkWinner(newBoard);
+	if (winner) {
+		return updateGameEndState(
+			state,
+			newBoard,
+			winner,
+			state.piecesPlaced,
+			newMoveHistory
+		);
+	}
+
+	// Check for draw (loop detection)
+	const isDraw = checkDraw(newBoard, newMoveHistory, state.gamePhase);
+	if (isDraw) {
+		return updateGameEndState(
+			state,
+			newBoard,
+			'draw',
+			state.piecesPlaced,
+			newMoveHistory
+		);
+	}
+
+	return {
+		...state,
+		board: newBoard,
+		currentPlayer: state.currentPlayer === 'X' ? 'O' : 'X',
+		selectedPiece: null,
+		moveHistory: newMoveHistory,
+	};
+}
+
+// Helper function to update game state when game ends
+function updateGameEndState(
+	state: GameState,
+	board: Player[],
+	winner: Player | 'draw',
+	piecesPlaced: { X: number; O: number },
+	moveHistory: {
+		from: number;
+		to: number;
+		player: Player;
+	}[] = state.moveHistory
+): GameState {
+	let newScore = { ...state.score };
+	let newCoins = state.coins;
+	let newConsecutiveWins = state.consecutiveWins;
+	let isFirstTime = state.isFirstTime;
+
+	if (winner === 'X') {
+		newScore.X++;
+		newCoins += 3;
+		newConsecutiveWins++;
+		if (newConsecutiveWins === 3) {
+			newCoins += 3;
+			newConsecutiveWins = 0;
+		}
+	} else if (winner === 'O') {
+		newScore.O++;
+		newConsecutiveWins = 0;
+	} else if (winner === 'draw') {
+		newScore.draws++;
+		newCoins += 1;
+		newConsecutiveWins = 0;
+	}
+
+	if (isFirstTime) {
+		newCoins += 10;
+		isFirstTime = false;
+		setTimeout(async () => {
+			try {
+				await setWelcomeBonusGiven();
+			} catch (error) {
+				console.error('Error marking welcome bonus as given:', error);
+			}
+		}, 0);
+	}
+
+	return {
+		...state,
+		board,
+		winner,
+		score: newScore,
+		isGameActive: false,
+		coins: newCoins,
+		consecutiveWins: newConsecutiveWins,
+		isFirstTime,
+		piecesPlaced,
+		moveHistory,
+	};
 }
 
 export default function GameProvider({ children }: { children: ReactNode }) {
@@ -393,9 +577,24 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 			!state.winner
 		) {
 			const timer = setTimeout(() => {
-				const bestMove = getBestMove([...state.board]);
-				if (bestMove !== -1) {
-					dispatch({ type: 'AI_MOVE', index: bestMove });
+				if (state.gamePhase === 'placement') {
+					const bestMove = getBestMove(
+						[...state.board],
+						state.gamePhase,
+						state.piecesPlaced
+					);
+					if (bestMove !== -1) {
+						dispatch({ type: 'AI_MOVE', index: bestMove });
+					}
+				} else if (state.gamePhase === 'movement') {
+					const bestMovePiece = getBestMovePiece([...state.board], 'O');
+					if (bestMovePiece) {
+						dispatch({
+							type: 'AI_MOVE_PIECE',
+							from: bestMovePiece.from,
+							to: bestMovePiece.to,
+						});
+					}
 				}
 			}, 800); // Delay for better UX
 
@@ -407,6 +606,8 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 		state.gameMode,
 		state.board,
 		state.winner,
+		state.gamePhase,
+		state.piecesPlaced,
 	]);
 
 	React.useEffect(() => {
