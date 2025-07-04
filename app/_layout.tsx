@@ -1,52 +1,75 @@
+import React from 'react';
 import {
 	Inter_400Regular,
 	Inter_600SemiBold,
 	Inter_700Bold,
 } from '@expo-google-fonts/inter';
-import { useFonts } from 'expo-font';
+import * as Fonts from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
 import { AudioProvider } from '@/context/AudioProvider';
 import { ThemeProvider } from '@/context/ThemeProvider';
 import GameProvider from '@/context/GameProvider';
-import * as SQLite from 'expo-sqlite';
-import { drizzle } from 'drizzle-orm/expo-sqlite';
+import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
+import migrations from '@/drizzle/migrations';
+import { View } from 'react-native';
+import { db } from '@/db/connection';
 
 SplashScreen.preventAutoHideAsync();
 
-// connect to drizzle DB
-const expo = SQLite.openDatabaseSync('db.db');
-
-export const db = drizzle(expo);
+SplashScreen.setOptions({
+	duration: 1000,
+	fade: true,
+});
 
 export default function RootLayout() {
-	const [fontsLoaded, fontError] = useFonts({
-		'Inter-Regular': Inter_400Regular,
-		'Inter-SemiBold': Inter_600SemiBold,
-		'Inter-Bold': Inter_700Bold,
-	});
+	const { success, error } = useMigrations(db, migrations);
+	const [appIsReady, setAppIsReady] = React.useState(false);
 
-	useEffect(() => {
-		if (fontsLoaded || fontError) {
-			SplashScreen.hideAsync();
+	if (error) {
+		console.error('Migration error:', error);
+	}
+
+	React.useEffect(() => {
+		async function prepare() {
+			try {
+				await Fonts.loadAsync({
+					Inter_400Regular,
+					Inter_600SemiBold,
+					Inter_700Bold,
+				});
+			} catch (e) {
+				console.warn('Error loading fonts:', e);
+			} finally {
+				setAppIsReady(true);
+			}
 		}
-	}, [fontsLoaded, fontError]);
 
-	if (!fontsLoaded && !fontError) {
+		prepare();
+	}, []);
+
+	const onLayoutRootView = React.useCallback(async () => {
+		if (appIsReady) {
+			await SplashScreen.hideAsync();
+		}
+	}, [appIsReady]);
+
+	if (!appIsReady || !success) {
 		return null;
 	}
 
 	return (
-		<ThemeProvider>
-			<GameProvider>
-				<AudioProvider>
-					<Stack screenOptions={{ headerShown: false }}>
-						<Stack.Screen name='(home)' />
-						<Stack.Screen name='+not-found' />
-					</Stack>
-				</AudioProvider>
-			</GameProvider>
-		</ThemeProvider>
+		<View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+			<ThemeProvider>
+				<GameProvider>
+					<AudioProvider>
+						<Stack screenOptions={{ headerShown: false }}>
+							<Stack.Screen name='(home)' />
+							<Stack.Screen name='+not-found' />
+						</Stack>
+					</AudioProvider>
+				</GameProvider>
+			</ThemeProvider>
+		</View>
 	);
 }

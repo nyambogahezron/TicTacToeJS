@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { coins, stats } from '../db/schema';
-import { db } from '@/app/_layout';
+import { db } from '../db/connection';
 
 // Coins operations
 export const getCoins = async (): Promise<number> => {
