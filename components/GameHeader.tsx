@@ -152,8 +152,8 @@ export default function GameHeader() {
 				</View>
 			</View>
 
-			{/* Game Phase Indicator */}
-			{!state.winner && (
+			{/* Game Phase Indicator - Only for Level 2 */}
+			{!state.winner && state.gameLevel === 2 && (
 				<View
 					style={[
 						styles.phaseContainer,

@@ -13,6 +13,7 @@ interface ThemeContextType {
 		cardText: string;
 		cardSubtext: string;
 		border: string;
+		primary: string;
 	};
 }
 

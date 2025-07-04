@@ -24,6 +24,7 @@ interface GameState {
 	currentPlayer: Player;
 	winner: Player | 'draw' | null;
 	gameMode: GameMode;
+	gameLevel: number;
 	score: {
 		X: number;
 		O: number;
@@ -57,13 +58,15 @@ type GameAction =
 	| { type: 'INITIALIZE_COINS' }
 	| { type: 'SET_STATS'; stats: { X: number; O: number; draws: number } }
 	| { type: 'SET_COINS'; coins: number }
-	| { type: 'SET_FIRST_TIME'; isFirstTime: boolean };
+	| { type: 'SET_FIRST_TIME'; isFirstTime: boolean }
+	| { type: 'SET_GAME_LEVEL'; level: number };
 
 const initialState: GameState = {
 	board: Array(9).fill(null),
 	currentPlayer: 'X',
 	winner: null,
 	gameMode: 'vsAI',
+	gameLevel: 2, // Default to Level 2 (Morris game)
 	score: { X: 0, O: 0, draws: 0 },
 	isGameActive: true,
 	coins: 0,
@@ -160,9 +163,65 @@ const checkDraw = (
 const getBestMove = (
 	board: Player[],
 	gamePhase: GamePhase,
-	piecesPlaced: { X: number; O: number }
+	piecesPlaced: { X: number; O: number },
+	gameLevel: number
 ): number => {
-	if (gamePhase === 'placement') {
+	if (gameLevel === 1) {
+		// Classic tic-tac-toe AI using minimax
+		const minimax = (
+			newBoard: Player[],
+			depth: number,
+			isMaximizing: boolean
+		): number => {
+			const winner = checkWinner(newBoard);
+			if (winner === 'O') return 1;
+			if (winner === 'X') return -1;
+			if (newBoard.every((cell) => cell !== null)) return 0; // Draw
+
+			if (isMaximizing) {
+				let bestScore = -Infinity;
+				for (let i = 0; i < 9; i++) {
+					if (newBoard[i] === null) {
+						newBoard[i] = 'O';
+						const score = minimax(newBoard, depth + 1, false);
+						newBoard[i] = null;
+						bestScore = Math.max(score, bestScore);
+					}
+				}
+				return bestScore;
+			} else {
+				let bestScore = Infinity;
+				for (let i = 0; i < 9; i++) {
+					if (newBoard[i] === null) {
+						newBoard[i] = 'X';
+						const score = minimax(newBoard, depth + 1, true);
+						newBoard[i] = null;
+						bestScore = Math.min(score, bestScore);
+					}
+				}
+				return bestScore;
+			}
+		};
+
+		let bestScore = -Infinity;
+		let bestMove = -1;
+
+		for (let i = 0; i < 9; i++) {
+			if (board[i] === null) {
+				board[i] = 'O';
+				const score = minimax(board, 0, false);
+				board[i] = null;
+				if (score > bestScore) {
+					bestScore = score;
+					bestMove = i;
+				}
+			}
+		}
+
+		return bestMove;
+	}
+
+	if (gameLevel === 2 && gamePhase === 'placement') {
 		// Simple placement strategy: try center, then corners, then edges
 		const preferredOrder = [4, 0, 2, 6, 8, 1, 3, 5, 7];
 		for (const index of preferredOrder) {
@@ -245,50 +304,88 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 		case 'MAKE_MOVE': {
 			if (!state.isGameActive) return state;
 
-			// Placement phase - place pieces if player has pieces left
-			if (state.gamePhase === 'placement') {
+			// Level 1: Classic Tic-Tac-Toe - unlimited pieces
+			if (state.gameLevel === 1) {
 				if (state.board[action.index] !== null) return state;
-				if (state.piecesPlaced[state.currentPlayer!] >= 3) return state;
 
 				const newBoard = [...state.board];
 				newBoard[action.index] = state.currentPlayer;
 
-				const newPiecesPlaced = {
-					...state.piecesPlaced,
-					[state.currentPlayer!]: state.piecesPlaced[state.currentPlayer!] + 1,
-				};
-
-				// Check for winner after placement
 				const winner = checkWinner(newBoard);
 				if (winner) {
-					return updateGameEndState(state, newBoard, winner, newPiecesPlaced);
+					return updateGameEndState(
+						state,
+						newBoard,
+						winner,
+						state.piecesPlaced
+					);
 				}
 
-				// Check if we should transition to movement phase
-				const shouldTransition =
-					newPiecesPlaced.X === 3 && newPiecesPlaced.O === 3;
+				// Check for draw (board full)
+				if (newBoard.every((cell) => cell !== null)) {
+					return updateGameEndState(
+						state,
+						newBoard,
+						'draw',
+						state.piecesPlaced
+					);
+				}
 
 				return {
 					...state,
 					board: newBoard,
 					currentPlayer: state.currentPlayer === 'X' ? 'O' : 'X',
-					piecesPlaced: newPiecesPlaced,
-					gamePhase: shouldTransition ? 'movement' : 'placement',
 				};
 			}
 
-			// Movement phase - select piece to move
-			if (state.gamePhase === 'movement') {
-				if (state.selectedPiece === null) {
-					// Select a piece to move
-					if (state.board[action.index] !== state.currentPlayer) return state;
+			// Level 2: Morris game (3 pieces, move to win)
+			if (state.gameLevel === 2) {
+				// Placement phase - place pieces if player has pieces left
+				if (state.gamePhase === 'placement') {
+					if (state.board[action.index] !== null) return state;
+					if (state.piecesPlaced[state.currentPlayer!] >= 3) return state;
+
+					const newBoard = [...state.board];
+					newBoard[action.index] = state.currentPlayer;
+
+					const newPiecesPlaced = {
+						...state.piecesPlaced,
+						[state.currentPlayer!]:
+							state.piecesPlaced[state.currentPlayer!] + 1,
+					};
+
+					// Check for winner after placement
+					const winner = checkWinner(newBoard);
+					if (winner) {
+						return updateGameEndState(state, newBoard, winner, newPiecesPlaced);
+					}
+
+					// Check if we should transition to movement phase
+					const shouldTransition =
+						newPiecesPlaced.X === 3 && newPiecesPlaced.O === 3;
+
 					return {
 						...state,
-						selectedPiece: action.index,
+						board: newBoard,
+						currentPlayer: state.currentPlayer === 'X' ? 'O' : 'X',
+						piecesPlaced: newPiecesPlaced,
+						gamePhase: shouldTransition ? 'movement' : 'placement',
 					};
-				} else {
-					// Move the selected piece
-					return handlePieceMove(state, state.selectedPiece, action.index);
+				}
+
+				// Movement phase - select piece to move
+				if (state.gamePhase === 'movement') {
+					if (state.selectedPiece === null) {
+						// Select a piece to move
+						if (state.board[action.index] !== state.currentPlayer) return state;
+						return {
+							...state,
+							selectedPiece: action.index,
+						};
+					} else {
+						// Move the selected piece
+						return handlePieceMove(state, state.selectedPiece, action.index);
+					}
 				}
 			}
 
@@ -374,6 +471,18 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 			return {
 				...state,
 				isFirstTime: action.isFirstTime,
+			};
+
+		case 'SET_GAME_LEVEL':
+			return {
+				...initialState,
+				gameLevel: action.level,
+				gameMode: state.gameMode,
+				score: state.score,
+				coins: state.coins,
+				consecutiveWins: state.consecutiveWins,
+				isFirstTime: state.isFirstTime,
+				gamePhase: action.level === 1 ? 'placement' : 'placement', // Level 1 doesn't use phases
 			};
 
 		default:
@@ -577,16 +686,17 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 			!state.winner
 		) {
 			const timer = setTimeout(() => {
-				if (state.gamePhase === 'placement') {
+				if (state.gameLevel === 1 || state.gamePhase === 'placement') {
 					const bestMove = getBestMove(
 						[...state.board],
 						state.gamePhase,
-						state.piecesPlaced
+						state.piecesPlaced,
+						state.gameLevel
 					);
 					if (bestMove !== -1) {
 						dispatch({ type: 'AI_MOVE', index: bestMove });
 					}
-				} else if (state.gamePhase === 'movement') {
+				} else if (state.gameLevel === 2 && state.gamePhase === 'movement') {
 					const bestMovePiece = getBestMovePiece([...state.board], 'O');
 					if (bestMovePiece) {
 						dispatch({
@@ -608,6 +718,7 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 		state.winner,
 		state.gamePhase,
 		state.piecesPlaced,
+		state.gameLevel,
 	]);
 
 	React.useEffect(() => {

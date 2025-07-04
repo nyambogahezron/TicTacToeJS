@@ -6,6 +6,7 @@ import GameBoard from '@/components/GameBoard';
 import GameHeader from '@/components/GameHeader';
 import GameOverPopup from '@/components/GameOverPopup';
 import CoinPopup from '@/components/CoinPopup';
+import LevelSelector from '@/components/LevelSelector';
 import { useGame } from '@/context/GameProvider';
 import { useTheme } from '@/context/ThemeProvider';
 
@@ -22,7 +23,7 @@ export default function GameScreen() {
 			setCoinPopup({ amount: earnedCoins });
 		}
 		setPrevCoins(state.coins);
-	}, [state.coins]);
+	}, [state.coins, prevCoins]);
 
 	const handleOverlayPress = () => {
 		if (state.winner) {
@@ -44,6 +45,7 @@ export default function GameScreen() {
 				>
 					<GameHeader />
 					<GameBoard />
+					<LevelSelector />
 					<GameOverPopup />
 					{coinPopup && (
 						<CoinPopup

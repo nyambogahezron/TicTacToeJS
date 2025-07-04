@@ -6,6 +6,7 @@ const Colors = {
 		cardText: '#0f172a',
 		cardSubtext: '#475569',
 		border: 'rgba(0, 0, 0, 0.1)',
+		primary: '#3b82f6',
 	},
 
 	darkTheme: {
@@ -15,6 +16,7 @@ const Colors = {
 		cardText: '#fff',
 		cardSubtext: '#94a3b8',
 		border: 'rgba(255, 255, 255, 0.2)',
+		primary: '#60a5fa',
 	},
 };
 

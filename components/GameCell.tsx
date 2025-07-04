@@ -51,9 +51,9 @@ export default function GameCell({
 	const handlePress = async () => {
 		if (disabled) return;
 
-		// In placement phase, allow placing if cell is empty
-		if (state.gamePhase === 'placement') {
-			if (value) return;
+		// Level 1: Classic Tic-Tac-Toe - simple placement
+		if (state.gameLevel === 1) {
+			if (value) return; // Can't place on occupied cell
 
 			scale.value = withSequence(
 				withSpring(0.9, { damping: 15 }),
@@ -65,12 +65,14 @@ export default function GameCell({
 			setTimeout(() => {
 				dispatch({ type: 'MAKE_MOVE', index });
 			}, 100);
+			return;
 		}
-		// In movement phase, handle piece selection and movement
-		else if (state.gamePhase === 'movement') {
-			// If no piece is selected and this cell has current player's piece, select it
-			if (state.selectedPiece === null) {
-				if (value !== state.currentPlayer) return;
+
+		// Level 2: Morris game logic
+		if (state.gameLevel === 2) {
+			// In placement phase, allow placing if cell is empty
+			if (state.gamePhase === 'placement') {
+				if (value) return;
 
 				scale.value = withSequence(
 					withSpring(0.9, { damping: 15 }),
@@ -80,46 +82,64 @@ export default function GameCell({
 				await Promise.all([playSound('move'), triggerHaptic('medium')]);
 
 				setTimeout(() => {
-					dispatch({ type: 'SELECT_PIECE', index });
+					dispatch({ type: 'MAKE_MOVE', index });
 				}, 100);
 			}
-			// If a piece is selected and this cell is empty, try to move
-			else {
-				if (value !== null) {
-					// If clicking on another piece of the same player, select that piece instead
-					if (value === state.currentPlayer) {
-						scale.value = withSequence(
-							withSpring(0.9, { damping: 15 }),
-							withSpring(1, { damping: 15 })
-						);
+			// In movement phase, handle piece selection and movement
+			else if (state.gamePhase === 'movement') {
+				// If no piece is selected and this cell has current player's piece, select it
+				if (state.selectedPiece === null) {
+					if (value !== state.currentPlayer) return;
 
-						await Promise.all([playSound('move'), triggerHaptic('medium')]);
+					scale.value = withSequence(
+						withSpring(0.9, { damping: 15 }),
+						withSpring(1, { damping: 15 })
+					);
 
-						setTimeout(() => {
-							dispatch({ type: 'SELECT_PIECE', index });
-						}, 100);
-					}
-					return;
+					await Promise.all([playSound('move'), triggerHaptic('medium')]);
+
+					setTimeout(() => {
+						dispatch({ type: 'SELECT_PIECE', index });
+					}, 100);
 				}
+				// If a piece is selected and this cell is empty, try to move
+				else {
+					if (value !== null) {
+						// If clicking on another piece of the same player, select that piece instead
+						if (value === state.currentPlayer) {
+							scale.value = withSequence(
+								withSpring(0.9, { damping: 15 }),
+								withSpring(1, { damping: 15 })
+							);
 
-				// Check if move is valid (adjacent to selected piece)
-				const adjacentCells = getAdjacentCells(state.selectedPiece);
-				if (!adjacentCells.includes(index)) return;
+							await Promise.all([playSound('move'), triggerHaptic('medium')]);
 
-				scale.value = withSequence(
-					withSpring(0.9, { damping: 15 }),
-					withSpring(1, { damping: 15 })
-				);
+							setTimeout(() => {
+								dispatch({ type: 'SELECT_PIECE', index });
+							}, 100);
+						}
+						return;
+					}
 
-				await Promise.all([playSound('move'), triggerHaptic('medium')]);
+					// Check if move is valid (adjacent to selected piece)
+					const adjacentCells = getAdjacentCells(state.selectedPiece);
+					if (!adjacentCells.includes(index)) return;
 
-				setTimeout(() => {
-					dispatch({
-						type: 'MOVE_PIECE',
-						from: state.selectedPiece!,
-						to: index,
-					});
-				}, 100);
+					scale.value = withSequence(
+						withSpring(0.9, { damping: 15 }),
+						withSpring(1, { damping: 15 })
+					);
+
+					await Promise.all([playSound('move'), triggerHaptic('medium')]);
+
+					setTimeout(() => {
+						dispatch({
+							type: 'MOVE_PIECE',
+							from: state.selectedPiece!,
+							to: index,
+						});
+					}, 100);
+				}
 			}
 		}
 	};

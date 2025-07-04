@@ -1,5 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, Switch, TouchableOpacity } from 'react-native';
+import {
+	View,
+	Text,
+	StyleSheet,
+	Switch,
+	TouchableOpacity,
+	ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp } from 'react-native-reanimated';
@@ -7,6 +14,7 @@ import { Volume2, Vibrate, Bot, Moon, ArrowLeft } from 'lucide-react-native';
 import { useAudio } from '@/context/AudioProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { useRouter } from 'expo-router';
+import DetailedLevelSelector from '@/components/DetailedLevelSelector';
 
 export default function SettingsScreen() {
 	const { soundEnabled, hapticEnabled, toggleSound, toggleHaptic } = useAudio();
@@ -51,7 +59,7 @@ export default function SettingsScreen() {
 	return (
 		<LinearGradient colors={colors.background} style={styles.container}>
 			<SafeAreaView style={styles.safeArea}>
-				<View style={styles.content}>
+				<ScrollView style={styles.content}>
 					<View style={styles.header}>
 						<TouchableOpacity
 							style={styles.backButton}
@@ -103,7 +111,9 @@ export default function SettingsScreen() {
 							color='#60a5fa'
 						/>
 					</View>
-				</View>
+
+					<DetailedLevelSelector />
+				</ScrollView>
 			</SafeAreaView>
 		</LinearGradient>
 	);
@@ -120,6 +130,7 @@ const styles = StyleSheet.create({
 		flex: 1,
 		paddingHorizontal: 20,
 		paddingTop: 20,
+		paddingBottom: 40,
 	},
 	header: {
 		flexDirection: 'row',
