@@ -1,0 +1,1 @@
+ALTER TABLE `coins` ADD `welcome_bonus_given` integer DEFAULT 0 NOT NULL;

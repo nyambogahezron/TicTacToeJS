@@ -13,6 +13,16 @@ export const getCoins = async (): Promise<number> => {
 	}
 };
 
+export const getWelcomeBonusStatus = async (): Promise<boolean> => {
+	try {
+		const result = await db.select().from(coins).orderBy(coins.id).limit(1);
+		return result[0]?.welcomeBonusGiven === 1;
+	} catch (error) {
+		console.error('Error getting welcome bonus status:', error);
+		return false;
+	}
+};
+
 export const updateCoins = async (amount: number): Promise<void> => {
 	try {
 		const currentCoin = await db
@@ -34,6 +44,31 @@ export const updateCoins = async (amount: number): Promise<void> => {
 		}
 	} catch (error) {
 		console.error('Error updating coins:', error);
+		throw error;
+	}
+};
+
+export const setWelcomeBonusGiven = async (): Promise<void> => {
+	try {
+		const currentCoin = await db
+			.select()
+			.from(coins)
+			.orderBy(coins.id)
+			.limit(1);
+
+		if (currentCoin.length > 0) {
+			await db
+				.update(coins)
+				.set({
+					welcomeBonusGiven: 1,
+					lastUpdated: sql`CURRENT_TIMESTAMP`,
+				})
+				.where(sql`id = ${currentCoin[0].id}`);
+		} else {
+			await db.insert(coins).values({ amount: 0, welcomeBonusGiven: 1 });
+		}
+	} catch (error) {
+		console.error('Error setting welcome bonus status:', error);
 		throw error;
 	}
 };

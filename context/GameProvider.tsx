@@ -11,6 +11,8 @@ import {
 	updateCoins,
 	getStats,
 	updateStats,
+	getWelcomeBonusStatus,
+	setWelcomeBonusGiven,
 } from '@/services/database';
 
 type Player = 'X' | 'O' | null;
@@ -39,7 +41,8 @@ type GameAction =
 	| { type: 'AI_MOVE'; index: number }
 	| { type: 'INITIALIZE_COINS' }
 	| { type: 'SET_STATS'; stats: { X: number; O: number; draws: number } }
-	| { type: 'SET_COINS'; coins: number };
+	| { type: 'SET_COINS'; coins: number }
+	| { type: 'SET_FIRST_TIME'; isFirstTime: boolean };
 
 const initialState: GameState = {
 	board: Array(9).fill(null),
@@ -175,10 +178,18 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 				newConsecutiveWins = 0;
 			}
 
-			// Award welcome coins for first time
+			// Award welcome coins for first time (only once ever)
 			if (isFirstTime) {
 				newCoins += 10;
 				isFirstTime = false;
+				// Mark welcome bonus as given in database immediately
+				setTimeout(async () => {
+					try {
+						await setWelcomeBonusGiven();
+					} catch (error) {
+						console.error('Error marking welcome bonus as given:', error);
+					}
+				}, 0);
 			}
 
 			return {
@@ -227,10 +238,18 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 				newConsecutiveWins = 0;
 			}
 
-			// Award welcome coins for first time
+			// Award welcome coins for first time (only once ever)
 			if (isFirstTime) {
 				newCoins += 10;
 				isFirstTime = false;
+				// Mark welcome bonus as given in database immediately
+				setTimeout(async () => {
+					try {
+						await setWelcomeBonusGiven();
+					} catch (error) {
+						console.error('Error marking welcome bonus as given:', error);
+					}
+				}, 0);
 			}
 
 			return {
@@ -282,6 +301,12 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 				coins: action.coins,
 			};
 
+		case 'SET_FIRST_TIME':
+			return {
+				...state,
+				isFirstTime: action.isFirstTime,
+			};
+
 		default:
 			return state;
 	}
@@ -298,8 +323,12 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 				setIsLoading(true);
 				// Load coins
 				const coins = await getCoins();
-				if (coins > 0) {
-					dispatch({ type: 'SET_COINS', coins });
+				dispatch({ type: 'SET_COINS', coins });
+
+				// Check if welcome bonus was already given
+				const welcomeBonusGiven = await getWelcomeBonusStatus();
+				if (welcomeBonusGiven) {
+					dispatch({ type: 'SET_FIRST_TIME', isFirstTime: false });
 				}
 
 				// Load stats
@@ -372,7 +401,13 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 
 			return () => clearTimeout(timer);
 		}
-	}, [state.currentPlayer, state.isGameActive, state.gameMode, state.board]);
+	}, [
+		state.currentPlayer,
+		state.isGameActive,
+		state.gameMode,
+		state.board,
+		state.winner,
+	]);
 
 	React.useEffect(() => {
 		if (state.winner) {

@@ -4,6 +4,7 @@ import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 export const coins = sqliteTable('coins', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
 	amount: integer('amount').notNull().default(0),
+	welcomeBonusGiven: integer('welcome_bonus_given').notNull().default(0),
 	lastUpdated: text('last_updated').default(sql`CURRENT_TIMESTAMP`),
 });
 
