@@ -23,6 +23,7 @@ interface GameState {
 	board: Player[];
 	currentPlayer: Player;
 	winner: Player | 'draw' | null;
+	winningPattern: number[] | null;
 	gameMode: GameMode;
 	gameLevel: number;
 	score: {
@@ -65,6 +66,7 @@ const initialState: GameState = {
 	board: Array(9).fill(null),
 	currentPlayer: 'X',
 	winner: null,
+	winningPattern: null,
 	gameMode: 'vsAI',
 	gameLevel: 2, // Default to Level 2 (Morris game)
 	score: { X: 0, O: 0, draws: 0 },
@@ -83,7 +85,9 @@ const GameContext = createContext<{
 	dispatch: React.Dispatch<GameAction>;
 } | null>(null);
 
-const checkWinner = (board: Player[]): Player | 'draw' | null => {
+const checkWinner = (
+	board: Player[]
+): { winner: Player | 'draw' | null; pattern: number[] | null } => {
 	const winPatterns = [
 		[0, 1, 2],
 		[3, 4, 5],
@@ -98,11 +102,11 @@ const checkWinner = (board: Player[]): Player | 'draw' | null => {
 	for (const pattern of winPatterns) {
 		const [a, b, c] = pattern;
 		if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-			return board[a];
+			return { winner: board[a], pattern };
 		}
 	}
 
-	return null;
+	return { winner: null, pattern: null };
 };
 
 // Get adjacent cells for movement phase
@@ -173,7 +177,7 @@ const getBestMove = (
 			depth: number,
 			isMaximizing: boolean
 		): number => {
-			const winner = checkWinner(newBoard);
+			const { winner } = checkWinner(newBoard);
 			if (winner === 'O') return 1;
 			if (winner === 'X') return -1;
 			if (newBoard.every((cell) => cell !== null)) return 0; // Draw
@@ -252,7 +256,7 @@ const getBestMovePiece = (
 				testBoard[pieceIndex] = null;
 				testBoard[adjacentIndex] = currentPlayer;
 
-				if (checkWinner(testBoard) === currentPlayer) {
+				if (checkWinner(testBoard).winner === currentPlayer) {
 					return { from: pieceIndex, to: adjacentIndex };
 				}
 			}
@@ -273,7 +277,7 @@ const getBestMovePiece = (
 				testBoard[opponentPiece] = null;
 				testBoard[adjacentIndex] = opponent;
 
-				if (checkWinner(testBoard) === opponent) {
+				if (checkWinner(testBoard).winner === opponent) {
 					// Block by moving our piece to that position if possible
 					for (const ourPiece of playerPieces) {
 						const ourAdjacent = getAdjacentCells(ourPiece);
@@ -311,13 +315,14 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 				const newBoard = [...state.board];
 				newBoard[action.index] = state.currentPlayer;
 
-				const winner = checkWinner(newBoard);
+				const { winner, pattern } = checkWinner(newBoard);
 				if (winner) {
 					return updateGameEndState(
 						state,
 						newBoard,
 						winner,
-						state.piecesPlaced
+						state.piecesPlaced,
+						pattern
 					);
 				}
 
@@ -352,12 +357,16 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 						...state.piecesPlaced,
 						[state.currentPlayer!]:
 							state.piecesPlaced[state.currentPlayer!] + 1,
-					};
-
-					// Check for winner after placement
-					const winner = checkWinner(newBoard);
+					}; // Check for winner after placement
+					const { winner, pattern } = checkWinner(newBoard);
 					if (winner) {
-						return updateGameEndState(state, newBoard, winner, newPiecesPlaced);
+						return updateGameEndState(
+							state,
+							newBoard,
+							winner,
+							newPiecesPlaced,
+							pattern
+						);
 					}
 
 					// Check if we should transition to movement phase
@@ -430,6 +439,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 				board: Array(9).fill(null),
 				currentPlayer: 'X',
 				winner: null,
+				winningPattern: null,
 				isGameActive: true,
 				gamePhase: 'placement',
 				piecesPlaced: { X: 0, O: 0 },
@@ -513,13 +523,14 @@ function handlePieceMove(
 	];
 
 	// Check for winner
-	const winner = checkWinner(newBoard);
+	const { winner, pattern } = checkWinner(newBoard);
 	if (winner) {
 		return updateGameEndState(
 			state,
 			newBoard,
 			winner,
 			state.piecesPlaced,
+			pattern,
 			newMoveHistory
 		);
 	}
@@ -532,6 +543,7 @@ function handlePieceMove(
 			newBoard,
 			'draw',
 			state.piecesPlaced,
+			null, // No winning pattern for draw
 			newMoveHistory
 		);
 	}
@@ -551,6 +563,7 @@ function updateGameEndState(
 	board: Player[],
 	winner: Player | 'draw',
 	piecesPlaced: { X: number; O: number },
+	winningPattern: number[] | null = null,
 	moveHistory: {
 		from: number;
 		to: number;
@@ -595,6 +608,7 @@ function updateGameEndState(
 		...state,
 		board,
 		winner,
+		winningPattern,
 		score: newScore,
 		isGameActive: false,
 		coins: newCoins,
@@ -721,15 +735,16 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 		state.gameLevel,
 	]);
 
-	React.useEffect(() => {
-		if (state.winner) {
-			const timer = setTimeout(() => {
-				dispatch({ type: 'RESET_GAME' });
-			}, 1000); // Reset after 1 second
+	// Remove automatic reset - now handled by WinningLine animation
+	// React.useEffect(() => {
+	// 	if (state.winner) {
+	// 		const timer = setTimeout(() => {
+	// 			dispatch({ type: 'RESET_GAME' });
+	// 		}, 1000); // Reset after 1 second
 
-			return () => clearTimeout(timer);
-		}
-	}, [state.winner, dispatch]);
+	// 		return () => clearTimeout(timer);
+	// 	}
+	// }, [state.winner, dispatch]);
 
 	if (isLoading) {
 		return null; // Or a loading spinner if you prefer

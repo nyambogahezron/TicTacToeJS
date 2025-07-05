@@ -1,10 +1,8 @@
-import { BlurView } from 'expo-blur';
 import React from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
-	withSequence,
 	withSpring,
 } from 'react-native-reanimated';
 import { useGame } from '../context/GameProvider';
@@ -15,6 +13,11 @@ interface GameCellProps {
 	value: 'X' | 'O' | null;
 	size: number;
 	disabled: boolean;
+	cellBorders: {
+		borderRightWidth: number;
+		borderBottomWidth: number;
+		borderColor: string;
+	};
 }
 
 export default function GameCell({
@@ -22,16 +25,11 @@ export default function GameCell({
 	value,
 	size,
 	disabled,
+	cellBorders,
 }: GameCellProps) {
 	const { dispatch, state } = useGame();
 	const { playSound, triggerHaptic } = useAudio();
-	const scale = useSharedValue(1);
-	const rotate = useSharedValue(0);
 	const opacity = useSharedValue(value ? 1 : 0);
-
-	const animatedStyle = useAnimatedStyle(() => ({
-		transform: [{ scale: scale.value }, { rotate: `${rotate.value}deg` }],
-	}));
 
 	const textAnimatedStyle = useAnimatedStyle(() => ({
 		opacity: opacity.value,
@@ -41,12 +39,8 @@ export default function GameCell({
 	React.useEffect(() => {
 		if (value) {
 			opacity.value = withSpring(1, { damping: 8 });
-			rotate.value = withSequence(
-				withSpring(-10, { damping: 8 }),
-				withSpring(0, { damping: 8 })
-			);
 		}
-	}, [value, opacity, rotate]);
+	}, [value, opacity]);
 
 	const handlePress = async () => {
 		if (disabled) return;
@@ -54,11 +48,6 @@ export default function GameCell({
 		// Level 1: Classic Tic-Tac-Toe - simple placement
 		if (state.gameLevel === 1) {
 			if (value) return; // Can't place on occupied cell
-
-			scale.value = withSequence(
-				withSpring(0.9, { damping: 15 }),
-				withSpring(1, { damping: 15 })
-			);
 
 			await Promise.all([playSound('move'), triggerHaptic('medium')]);
 
@@ -74,11 +63,6 @@ export default function GameCell({
 			if (state.gamePhase === 'placement') {
 				if (value) return;
 
-				scale.value = withSequence(
-					withSpring(0.9, { damping: 15 }),
-					withSpring(1, { damping: 15 })
-				);
-
 				await Promise.all([playSound('move'), triggerHaptic('medium')]);
 
 				setTimeout(() => {
@@ -91,11 +75,6 @@ export default function GameCell({
 				if (state.selectedPiece === null) {
 					if (value !== state.currentPlayer) return;
 
-					scale.value = withSequence(
-						withSpring(0.9, { damping: 15 }),
-						withSpring(1, { damping: 15 })
-					);
-
 					await Promise.all([playSound('move'), triggerHaptic('medium')]);
 
 					setTimeout(() => {
@@ -107,11 +86,6 @@ export default function GameCell({
 					if (value !== null) {
 						// If clicking on another piece of the same player, select that piece instead
 						if (value === state.currentPlayer) {
-							scale.value = withSequence(
-								withSpring(0.9, { damping: 15 }),
-								withSpring(1, { damping: 15 })
-							);
-
 							await Promise.all([playSound('move'), triggerHaptic('medium')]);
 
 							setTimeout(() => {
@@ -124,11 +98,6 @@ export default function GameCell({
 					// Check if move is valid (adjacent to selected piece)
 					const adjacentCells = getAdjacentCells(state.selectedPiece);
 					if (!adjacentCells.includes(index)) return;
-
-					scale.value = withSequence(
-						withSpring(0.9, { damping: 15 }),
-						withSpring(1, { damping: 15 })
-					);
 
 					await Promise.all([playSound('move'), triggerHaptic('medium')]);
 
@@ -150,10 +119,10 @@ export default function GameCell({
 		return '#fff';
 	};
 
-	const getBorderColor = () => {
+	const getBackgroundColor = () => {
 		// Highlight selected piece
 		if (state.selectedPiece === index) {
-			return '#fbbf24'; // Yellow for selected
+			return '#fbbf24' + '30'; // Yellow with transparency for selected
 		}
 
 		// Show valid move targets when a piece is selected
@@ -164,21 +133,11 @@ export default function GameCell({
 		) {
 			const adjacentCells = getAdjacentCells(state.selectedPiece);
 			if (adjacentCells.includes(index)) {
-				return 'rgba(251, 191, 36, 0.5)'; // Light yellow for valid targets
+				return '#fbbf24' + '20'; // Light yellow for valid targets
 			}
 		}
 
-		if (value === 'X') return 'rgba(16, 185, 129, 0.3)';
-		if (value === 'O') return 'rgba(239, 68, 68, 0.3)';
-		return 'rgba(255, 255, 255, 0.1)';
-	};
-
-	const getBorderWidth = () => {
-		// Thicker border for selected piece
-		if (state.selectedPiece === index) {
-			return 3;
-		}
-		return 2;
+		return 'transparent'; // Clean background
 	};
 
 	// Helper function to get adjacent cells (same as in GameProvider)
@@ -198,32 +157,30 @@ export default function GameCell({
 	};
 
 	return (
-		<Animated.View style={animatedStyle}>
+		<Animated.View>
 			<TouchableOpacity
 				style={[
 					styles.cell,
 					{
 						width: size,
 						height: size,
-						borderColor: getBorderColor(),
-						borderWidth: getBorderWidth(),
+						backgroundColor: getBackgroundColor(),
+						...cellBorders,
 					},
 				]}
 				onPress={handlePress}
 				disabled={disabled}
 				activeOpacity={0.8}
 			>
-				<BlurView intensity={20} style={styles.blur}>
-					<Animated.Text
-						style={[
-							styles.cellText,
-							textAnimatedStyle,
-							{ color: getTextColor(), fontSize: size * 0.4 },
-						]}
-					>
-						{value}
-					</Animated.Text>
-				</BlurView>
+				<Animated.Text
+					style={[
+						styles.cellText,
+						textAnimatedStyle,
+						{ color: getTextColor(), fontSize: size * 0.4 },
+					]}
+				>
+					{value}
+				</Animated.Text>
 			</TouchableOpacity>
 		</Animated.View>
 	);
@@ -231,21 +188,11 @@ export default function GameCell({
 
 const styles = StyleSheet.create({
 	cell: {
-		borderRadius: 16,
-		borderWidth: 2,
-		overflow: 'hidden',
-		elevation: 5,
-	},
-	blur: {
-		flex: 1,
 		justifyContent: 'center',
 		alignItems: 'center',
 	},
 	cellText: {
 		fontFamily: 'Inter-Bold',
 		textAlign: 'center',
-		textShadowColor: 'rgba(0, 0, 0, 0.3)',
-		textShadowOffset: { width: 0, height: 2 },
-		textShadowRadius: 4,
 	},
 });

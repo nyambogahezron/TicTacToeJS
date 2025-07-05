@@ -151,27 +151,6 @@ export default function GameHeader() {
 					</Text>
 				</View>
 			</View>
-
-			{/* Game Phase Indicator - Only for Level 2 */}
-			{!state.winner && state.gameLevel === 2 && (
-				<View
-					style={[
-						styles.phaseContainer,
-						{ backgroundColor: colors.card, borderColor: colors.border },
-					]}
-				>
-					<Text style={[styles.phaseText, { color: colors.cardSubtext }]}>
-						{state.gamePhase === 'placement'
-							? '📍 Placement Phase'
-							: '🔄 Movement Phase'}
-					</Text>
-					{state.gamePhase === 'placement' && (
-						<Text style={[styles.piecesText, { color: colors.cardSubtext }]}>
-							X: {state.piecesPlaced.X}/3 | O: {state.piecesPlaced.O}/3
-						</Text>
-					)}
-				</View>
-			)}
 		</Animated.View>
 	);
 }
@@ -264,22 +243,5 @@ const styles = StyleSheet.create({
 	coinText: {
 		fontSize: 14,
 		fontFamily: 'Inter-SemiBold',
-	},
-	phaseContainer: {
-		marginTop: 12,
-		paddingHorizontal: 16,
-		paddingVertical: 12,
-		borderRadius: 12,
-		borderWidth: 1,
-		alignItems: 'center',
-	},
-	phaseText: {
-		fontSize: 13,
-		fontFamily: 'Inter-SemiBold',
-		marginBottom: 4,
-	},
-	piecesText: {
-		fontSize: 11,
-		fontFamily: 'Inter-Medium',
 	},
 });

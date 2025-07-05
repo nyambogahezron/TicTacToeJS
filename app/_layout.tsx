@@ -7,6 +7,7 @@ import {
 import * as Fonts from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+// import * as SystemUI from 'expo-system-ui';
 import { AudioProvider } from '@/context/AudioProvider';
 import { ThemeProvider } from '@/context/ThemeProvider';
 import GameProvider from '@/context/GameProvider';
@@ -29,6 +30,12 @@ export default function RootLayout() {
 	if (error) {
 		console.error('Migration error:', error);
 	}
+
+	// React.useEffect(() => {
+	// 	SystemUI.setBackgroundColorAsync('transparent');
+	// 	SystemUI.setStatusBarStyleAsync('light');
+	// 	SystemUI.setStatusBarTranslucentAsync(true);
+	// }, []);
 
 	React.useEffect(() => {
 		async function prepare() {
