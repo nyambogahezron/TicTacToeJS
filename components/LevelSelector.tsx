@@ -11,11 +11,10 @@ export default function LevelSelector() {
 	const levels = [
 		{ id: 1, name: 'L1', disabled: false },
 		{ id: 2, name: 'L2', disabled: false },
-		{ id: 3, name: 'L3', disabled: true },
+		{ id: 3, name: 'L3', disabled: false },
 	];
 
 	const handleLevelChange = (levelId: number) => {
-		if (levelId === 3) return;
 		dispatch({ type: 'SET_GAME_LEVEL', level: levelId });
 	};
 

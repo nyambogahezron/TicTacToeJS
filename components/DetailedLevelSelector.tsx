@@ -24,14 +24,14 @@ export default function DetailedLevelSelector() {
 		{
 			id: 3,
 			name: 'Level 3',
-			subtitle: 'Advanced Morris',
-			description: 'Coming soon - More complex rules',
-			disabled: true,
+			subtitle: 'Restricted Morris',
+			description:
+				'Place 3 pieces, then move only in straight lines (no diagonal)',
+			disabled: false,
 		},
 	];
 
 	const handleLevelChange = (levelId: number) => {
-		if (levelId === 3) return; // Level 3 is disabled for now
 		dispatch({ type: 'SET_GAME_LEVEL', level: levelId });
 	};
 

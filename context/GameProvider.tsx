@@ -147,6 +147,22 @@ const getAdjacentCells = (index: number): number[] => {
 	return adjacencyMap[index] || [];
 };
 
+// Get adjacent cells for straight-line movement only (Level 3)
+const getStraightLineAdjacentCells = (index: number): number[] => {
+	const adjacencyMap: { [key: number]: number[] } = {
+		0: [1, 3], // Only right and down
+		1: [0, 2, 4], // Left, right, and down
+		2: [1, 5], // Only left and down
+		3: [0, 4, 6], // Up, right, and down
+		4: [1, 3, 5, 7], // Up, left, right, and down (no diagonals)
+		5: [2, 4, 8], // Up, left, and down
+		6: [3, 7], // Only up and right
+		7: [4, 6, 8], // Left, up, and right
+		8: [5, 7], // Only left and up
+	};
+	return adjacencyMap[index] || [];
+};
+
 // Check if a move creates a repeated position (for draw detection)
 const isRepeatingPosition = (
 	moveHistory: { from: number; to: number; player: Player }[],
@@ -256,6 +272,16 @@ const getBestMove = (
 			}
 		}
 	}
+
+	if (gameLevel === 3 && gamePhase === 'placement') {
+		// Same placement strategy as Level 2
+		const preferredOrder = [4, 0, 2, 6, 8, 1, 3, 5, 7];
+		for (const index of preferredOrder) {
+			if (board[index] === null) {
+				return index;
+			}
+		}
+	}
 	return -1;
 };
 
@@ -315,6 +341,72 @@ const getBestMovePiece = (
 	// Make a random valid move
 	for (const pieceIndex of playerPieces) {
 		const adjacentCells = getAdjacentCells(pieceIndex);
+		for (const adjacentIndex of adjacentCells) {
+			if (board[adjacentIndex] === null) {
+				return { from: pieceIndex, to: adjacentIndex };
+			}
+		}
+	}
+
+	return null;
+};
+
+const getBestMovePieceLevel3 = (
+	board: Player[],
+	currentPlayer: Player
+): { from: number; to: number } | null => {
+	// Find all pieces belonging to current player
+	const playerPieces = board
+		.map((cell, index) => (cell === currentPlayer ? index : -1))
+		.filter((index) => index !== -1);
+
+	// Try to find a winning move using straight-line movement
+	for (const pieceIndex of playerPieces) {
+		const adjacentCells = getStraightLineAdjacentCells(pieceIndex);
+		for (const adjacentIndex of adjacentCells) {
+			if (board[adjacentIndex] === null) {
+				// Test this move
+				const testBoard = [...board];
+				testBoard[pieceIndex] = null;
+				testBoard[adjacentIndex] = currentPlayer;
+
+				if (checkWinner(testBoard).winner === currentPlayer) {
+					return { from: pieceIndex, to: adjacentIndex };
+				}
+			}
+		}
+	}
+
+	// Try to block opponent's winning move using straight-line movement
+	const opponent = currentPlayer === 'X' ? 'O' : 'X';
+	const opponentPieces = board
+		.map((cell, index) => (cell === opponent ? index : -1))
+		.filter((index) => index !== -1);
+
+	for (const opponentPiece of opponentPieces) {
+		const adjacentCells = getStraightLineAdjacentCells(opponentPiece);
+		for (const adjacentIndex of adjacentCells) {
+			if (board[adjacentIndex] === null) {
+				const testBoard = [...board];
+				testBoard[opponentPiece] = null;
+				testBoard[adjacentIndex] = opponent;
+
+				if (checkWinner(testBoard).winner === opponent) {
+					// Block by moving our piece to that position if possible
+					for (const ourPiece of playerPieces) {
+						const ourAdjacent = getStraightLineAdjacentCells(ourPiece);
+						if (ourAdjacent.includes(adjacentIndex)) {
+							return { from: ourPiece, to: adjacentIndex };
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Make a random valid move using straight-line movement
+	for (const pieceIndex of playerPieces) {
+		const adjacentCells = getStraightLineAdjacentCells(pieceIndex);
 		for (const adjacentIndex of adjacentCells) {
 			if (board[adjacentIndex] === null) {
 				return { from: pieceIndex, to: adjacentIndex };
@@ -430,6 +522,73 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 					} else {
 						// Move the selected piece
 						return handlePieceMove(state, state.selectedPiece, action.index);
+					}
+				}
+			}
+
+			// Level 3: Restricted Morris game (3 pieces, straight-line movement only)
+			if (state.gameLevel === 3) {
+				// Placement phase - place pieces if player has pieces left
+				if (state.gamePhase === 'placement') {
+					if (state.board[action.index] !== null) return state;
+					if (state.piecesPlaced[state.currentPlayer!] >= 3) return state;
+
+					const newBoard = [...state.board];
+					newBoard[action.index] = state.currentPlayer;
+
+					const newPiecesPlaced = {
+						...state.piecesPlaced,
+						[state.currentPlayer!]:
+							state.piecesPlaced[state.currentPlayer!] + 1,
+					};
+
+					// Check for winner after placement
+					const { winner, pattern } = checkWinner(newBoard);
+					if (winner) {
+						console.log(
+							'Winner detected during placement in Level 3:',
+							winner,
+							'Pattern:',
+							pattern
+						);
+						return updateGameEndState(
+							state,
+							newBoard,
+							winner,
+							newPiecesPlaced,
+							pattern
+						);
+					}
+
+					// Check if we should transition to movement phase
+					const shouldTransition =
+						newPiecesPlaced.X === 3 && newPiecesPlaced.O === 3;
+
+					return {
+						...state,
+						board: newBoard,
+						currentPlayer: state.currentPlayer === 'X' ? 'O' : 'X',
+						piecesPlaced: newPiecesPlaced,
+						gamePhase: shouldTransition ? 'movement' : 'placement',
+					};
+				}
+
+				// Movement phase - select piece to move (restricted to straight lines)
+				if (state.gamePhase === 'movement') {
+					if (state.selectedPiece === null) {
+						// Select a piece to move
+						if (state.board[action.index] !== state.currentPlayer) return state;
+						return {
+							...state,
+							selectedPiece: action.index,
+						};
+					} else {
+						// Move the selected piece using straight-line movement
+						return handlePieceMoveLevel3(
+							state,
+							state.selectedPiece,
+							action.index
+						);
 					}
 				}
 			}
@@ -625,6 +784,95 @@ function handlePieceMove(
 	};
 }
 
+// Helper function to handle piece movement for Level 3 (straight-line movement only)
+function handlePieceMoveLevel3(
+	state: GameState,
+	from: number,
+	to: number
+): GameState {
+	// Validate inputs
+	if (from < 0 || from > 8 || to < 0 || to > 8) {
+		console.error('Invalid move indices:', { from, to });
+		return state;
+	}
+
+	// Check if the piece being moved belongs to current player
+	if (state.board[from] !== state.currentPlayer) {
+		console.error('Piece does not belong to current player:', {
+			from,
+			player: state.currentPlayer,
+			piece: state.board[from],
+		});
+		return state;
+	}
+
+	// Check if destination is empty
+	if (state.board[to] !== null) {
+		console.error('Destination cell is not empty:', {
+			to,
+			cell: state.board[to],
+		});
+		return state;
+	}
+
+	// Check if move is to adjacent cell using straight-line movement only
+	const adjacentCells = getStraightLineAdjacentCells(from);
+	if (!adjacentCells.includes(to)) {
+		console.error('Move is not to straight-line adjacent cell:', {
+			from,
+			to,
+			adjacent: adjacentCells,
+		});
+		return state;
+	}
+
+	// Create new board state
+	const newBoard = [...state.board];
+	newBoard[from] = null;
+	newBoard[to] = state.currentPlayer;
+
+	const newMoveHistory = [
+		...state.moveHistory,
+		{ from, to, player: state.currentPlayer! },
+	];
+
+	// Check for winner with the new board state
+	const { winner, pattern } = checkWinner(newBoard);
+	if (winner) {
+		console.log('Winner detected in Level 3:', winner, 'Pattern:', pattern);
+		return updateGameEndState(
+			state,
+			newBoard,
+			winner,
+			state.piecesPlaced,
+			pattern,
+			newMoveHistory
+		);
+	}
+
+	// Check for draw (loop detection)
+	const isDraw = checkDraw(newBoard, newMoveHistory, state.gamePhase);
+	if (isDraw) {
+		console.log('Draw detected due to repeated moves in Level 3');
+		return updateGameEndState(
+			state,
+			newBoard,
+			'draw',
+			state.piecesPlaced,
+			null, // No winning pattern for draw
+			newMoveHistory
+		);
+	}
+
+	return {
+		...state,
+		board: newBoard,
+		currentPlayer: state.currentPlayer === 'X' ? 'O' : 'X',
+		selectedPiece: null,
+		moveHistory: newMoveHistory,
+	};
+}
+
 // Helper function to update game state when game ends
 function updateGameEndState(
 	state: GameState,
@@ -801,6 +1049,15 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 					}
 				} else if (state.gameLevel === 2 && state.gamePhase === 'movement') {
 					const bestMovePiece = getBestMovePiece([...state.board], 'O');
+					if (bestMovePiece) {
+						dispatch({
+							type: 'AI_MOVE_PIECE',
+							from: bestMovePiece.from,
+							to: bestMovePiece.to,
+						});
+					}
+				} else if (state.gameLevel === 3 && state.gamePhase === 'movement') {
+					const bestMovePiece = getBestMovePieceLevel3([...state.board], 'O');
 					if (bestMovePiece) {
 						dispatch({
 							type: 'AI_MOVE_PIECE',
