@@ -49,9 +49,9 @@ export default function GameOverPopup() {
 	if (!state.winner) return null;
 
 	const getIcon = () => {
-		if (state.winner === 'X') return <Trophy size={48} color='#10b981' />;
-		if (state.winner === 'O') return <XCircle size={48} color='#ef4444' />;
-		return <Handshake size={48} color='#f59e0b' />;
+		if (state.winner === 'X') return <Trophy size={36} color='#10b981' />;
+		if (state.winner === 'O') return <XCircle size={36} color='#ef4444' />;
+		return <Handshake size={36} color='#f59e0b' />;
 	};
 
 	const getMessage = () => {
@@ -69,7 +69,7 @@ export default function GameOverPopup() {
 
 	return (
 		<Animated.View entering={FadeIn} exiting={FadeOut} style={styles.overlay}>
-			<BlurView intensity={40} style={styles.blur}>
+			<BlurView intensity={20} style={styles.blur}>
 				<Animated.View
 					entering={SlideInDown.springify()}
 					exiting={SlideOutDown.springify()}
@@ -106,8 +106,8 @@ const styles = StyleSheet.create({
 		...StyleSheet.absoluteFillObject,
 		justifyContent: 'center',
 		alignItems: 'center',
-		backgroundColor: 'rgba(0, 0, 0, 0.5)',
-		zIndex: 1000,
+		backgroundColor: 'rgba(0, 0, 0, 0.75)',
+		zIndex: 9999,
 	},
 	blur: {
 		...StyleSheet.absoluteFillObject,
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
 	popup: {
 		width: width - 40,
 		borderRadius: 24,
-		padding: 24,
+		padding: 16,
 		alignItems: 'center',
 		borderWidth: 2,
 		shadowColor: '#000',
@@ -127,21 +127,21 @@ const styles = StyleSheet.create({
 		elevation: 8,
 	},
 	iconContainer: {
-		width: 80,
-		height: 80,
-		borderRadius: 40,
+		width: 60,
+		height: 60,
+		borderRadius: 30,
 		justifyContent: 'center',
 		alignItems: 'center',
-		marginBottom: 16,
+		marginBottom: 12,
 	},
 	message: {
-		fontSize: 32,
+		fontSize: 28,
 		fontFamily: 'Inter-Bold',
-		marginBottom: 8,
+		marginBottom: 6,
 		textAlign: 'center',
 	},
 	subMessage: {
-		fontSize: 16,
+		fontSize: 14,
 		fontFamily: 'Inter-SemiBold',
 		textAlign: 'center',
 	},

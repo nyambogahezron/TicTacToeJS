@@ -1,6 +1,12 @@
 import { sql } from 'drizzle-orm';
 import { coins, stats } from '../db/schema';
 import { db } from '../db/connection';
+import {
+	checkAllAchievements,
+	startSession,
+	endSession,
+	updateDailyActivity,
+} from './achievements';
 
 // Cache for frequently accessed data
 let coinCache: {
@@ -210,5 +216,72 @@ export const updateStats = async (newStats: {
 	} catch (error) {
 		console.error('Error updating stats:', error);
 		throw error;
+	}
+};
+
+// Enhanced function to handle game completion with achievements
+export const completeGame = async (
+	gameResult: 'win' | 'loss' | 'draw',
+	consecutiveWins: number,
+	totalWins: number,
+	totalGames: number,
+	notificationCallback?: (achievements: any[]) => void
+): Promise<any[]> => {
+	try {
+		// Update daily activity
+		await updateDailyActivity(1);
+
+		// Check for new achievements
+		const newAchievements = await checkAllAchievements({
+			totalWins,
+			totalGames,
+			consecutiveWins,
+		});
+
+		// Award coins for new achievements
+		if (newAchievements.length > 0) {
+			const achievementCoins = newAchievements.reduce(
+				(total, achievement) => total + achievement.coinReward,
+				0
+			);
+			await addCoins(achievementCoins);
+
+			// Show achievement popups
+			if (newAchievements.length > 0) {
+				// Use global achievement notification system
+				const globalRefresh = (global as any).refreshAchievements;
+				if (globalRefresh) {
+					globalRefresh();
+				}
+
+				// Show first achievement popup (if you want to show them one by one)
+				const globalAddAchievement = (global as any).addNewAchievement;
+				if (globalAddAchievement && newAchievements[0]) {
+					globalAddAchievement(newAchievements[0]);
+				}
+			}
+		}
+
+		return newAchievements;
+	} catch (error) {
+		console.error('Error completing game:', error);
+		return [];
+	}
+};
+
+// Session management functions
+export const initializeSession = async (): Promise<void> => {
+	try {
+		await startSession();
+	} catch (error) {
+		console.error('Error initializing session:', error);
+	}
+};
+
+export const finalizeSession = async (): Promise<void> => {
+	try {
+		await endSession();
+	} catch (error) {
+		console.error('Error finalizing session:', error);
 	}
 };

@@ -14,6 +14,7 @@ import {
 	updateStats,
 	getWelcomeBonusStatus,
 	setWelcomeBonusGiven,
+	completeGame,
 } from '@/services/database';
 
 type Player = 'X' | 'O' | null;
@@ -89,21 +90,41 @@ const GameContext = createContext<{
 const checkWinner = (
 	board: Player[]
 ): { winner: Player | 'draw' | null; pattern: number[] | null } => {
+	// Validate board input
+	if (!board || board.length !== 9) {
+		console.error('Invalid board provided to checkWinner');
+		return { winner: null, pattern: null };
+	}
+
 	const winPatterns = [
-		[0, 1, 2],
-		[3, 4, 5],
-		[6, 7, 8], // rows
-		[0, 3, 6],
-		[1, 4, 7],
-		[2, 5, 8], // columns
-		[0, 4, 8],
-		[2, 4, 6], // diagonals
+		[0, 1, 2], // Top row
+		[3, 4, 5], // Middle row
+		[6, 7, 8], // Bottom row
+		[0, 3, 6], // Left column
+		[1, 4, 7], // Middle column
+		[2, 5, 8], // Right column
+		[0, 4, 8], // Main diagonal
+		[2, 4, 6], // Anti-diagonal
 	];
 
 	for (const pattern of winPatterns) {
 		const [a, b, c] = pattern;
-		if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-			return { winner: board[a], pattern };
+
+		// Ensure indices are valid
+		if (a < 0 || a > 8 || b < 0 || b > 8 || c < 0 || c > 8) {
+			console.error('Invalid pattern indices:', pattern);
+			continue;
+		}
+
+		// Check if all three positions have the same non-null player
+		const cellA = board[a];
+		const cellB = board[b];
+		const cellC = board[c];
+
+		if (cellA && cellA === cellB && cellA === cellC) {
+			// Return a sorted copy of the pattern to ensure consistent ordering
+			const sortedPattern = [...pattern].sort((x, y) => x - y);
+			return { winner: cellA, pattern: sortedPattern };
 		}
 	}
 
@@ -318,6 +339,12 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
 				const { winner, pattern } = checkWinner(newBoard);
 				if (winner) {
+					console.log(
+						'Winner detected in classic mode:',
+						winner,
+						'Pattern:',
+						pattern
+					);
 					return updateGameEndState(
 						state,
 						newBoard,
@@ -358,9 +385,17 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 						...state.piecesPlaced,
 						[state.currentPlayer!]:
 							state.piecesPlaced[state.currentPlayer!] + 1,
-					}; // Check for winner after placement
+					};
+
+					// Check for winner after placement
 					const { winner, pattern } = checkWinner(newBoard);
 					if (winner) {
+						console.log(
+							'Winner detected during placement:',
+							winner,
+							'Pattern:',
+							pattern
+						);
 						return updateGameEndState(
 							state,
 							newBoard,
@@ -507,13 +542,43 @@ function handlePieceMove(
 	from: number,
 	to: number
 ): GameState {
-	if (state.board[from] !== state.currentPlayer) return state;
-	if (state.board[to] !== null) return state;
+	// Validate inputs
+	if (from < 0 || from > 8 || to < 0 || to > 8) {
+		console.error('Invalid move indices:', { from, to });
+		return state;
+	}
+
+	// Check if the piece being moved belongs to current player
+	if (state.board[from] !== state.currentPlayer) {
+		console.error('Piece does not belong to current player:', {
+			from,
+			player: state.currentPlayer,
+			piece: state.board[from],
+		});
+		return state;
+	}
+
+	// Check if destination is empty
+	if (state.board[to] !== null) {
+		console.error('Destination cell is not empty:', {
+			to,
+			cell: state.board[to],
+		});
+		return state;
+	}
 
 	// Check if move is to adjacent cell
 	const adjacentCells = getAdjacentCells(from);
-	if (!adjacentCells.includes(to)) return state;
+	if (!adjacentCells.includes(to)) {
+		console.error('Move is not to adjacent cell:', {
+			from,
+			to,
+			adjacent: adjacentCells,
+		});
+		return state;
+	}
 
+	// Create new board state
 	const newBoard = [...state.board];
 	newBoard[from] = null;
 	newBoard[to] = state.currentPlayer;
@@ -523,9 +588,10 @@ function handlePieceMove(
 		{ from, to, player: state.currentPlayer! },
 	];
 
-	// Check for winner
+	// Check for winner with the new board state
 	const { winner, pattern } = checkWinner(newBoard);
 	if (winner) {
+		console.log('Winner detected:', winner, 'Pattern:', pattern);
 		return updateGameEndState(
 			state,
 			newBoard,
@@ -539,6 +605,7 @@ function handlePieceMove(
 	// Check for draw (loop detection)
 	const isDraw = checkDraw(newBoard, newMoveHistory, state.gamePhase);
 	if (isDraw) {
+		console.log('Draw detected due to repeated moves');
 		return updateGameEndState(
 			state,
 			newBoard,
@@ -604,6 +671,24 @@ function updateGameEndState(
 			}
 		}, 0);
 	}
+
+	// Handle achievements asynchronously
+	setTimeout(async () => {
+		try {
+			const totalGames = newScore.X + newScore.O + newScore.draws;
+			const gameResult =
+				winner === 'X' ? 'win' : winner === 'O' ? 'loss' : 'draw';
+
+			await completeGame(
+				gameResult,
+				newConsecutiveWins,
+				newScore.X,
+				totalGames
+			);
+		} catch (error) {
+			console.error('Error handling achievements:', error);
+		}
+	}, 0);
 
 	return {
 		...state,

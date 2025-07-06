@@ -38,6 +38,7 @@ const WinningLine = memo(function WinningLine({
 	}, []);
 
 	const triggerAnimation = useCallback(() => {
+		console.log('WinningLine: Triggering animation');
 		if (completionTimeoutRef.current) {
 			clearTimeout(completionTimeoutRef.current);
 		}
@@ -49,6 +50,9 @@ const WinningLine = memo(function WinningLine({
 		scaleX.value = withTiming(1, { duration: 800 });
 
 		completionTimeoutRef.current = setTimeout(() => {
+			console.log(
+				'WinningLine: Animation complete, calling onAnimationComplete'
+			);
 			onAnimationComplete();
 			completionTimeoutRef.current = null;
 		}, 2300);
@@ -56,16 +60,19 @@ const WinningLine = memo(function WinningLine({
 
 	useEffect(() => {
 		if (winPattern) {
+			console.log('WinningLine: New winning pattern detected:', winPattern);
+			console.log('WinningLine: Cell size:', cellSize);
 			setIsVisible(true);
 			triggerAnimation();
 		} else {
+			console.log('WinningLine: No winning pattern, hiding line');
 			setIsVisible(false);
 			if (completionTimeoutRef.current) {
 				clearTimeout(completionTimeoutRef.current);
 				completionTimeoutRef.current = null;
 			}
 		}
-	}, [winPattern, triggerAnimation]);
+	}, [winPattern, triggerAnimation, cellSize]);
 
 	const animatedStyle = useAnimatedStyle(() => ({
 		opacity: opacity.value,
@@ -73,47 +80,86 @@ const WinningLine = memo(function WinningLine({
 	}));
 
 	const lineStyle = useMemo(() => {
-		if (!winPattern) return null;
+		if (!winPattern || winPattern.length !== 3) {
+			console.warn('WinningLine: Invalid win pattern length:', winPattern);
+			return null;
+		}
 
 		try {
-			const [a, , c] = winPattern;
+			// Ensure pattern is sorted for consistent line drawing
+			const sortedPattern = [...winPattern].sort((x, y) => x - y);
+			const [a, b, c] = sortedPattern;
 
+			// Validate pattern indices
+			if (a < 0 || a > 8 || b < 0 || b > 8 || c < 0 || c > 8) {
+				console.error('WinningLine: Invalid winning pattern indices:', sortedPattern);
+				return null;
+			}
+
+			// Validate that all indices are unique
+			if (a === b || b === c || a === c) {
+				console.error('WinningLine: Duplicate indices in pattern:', sortedPattern);
+				return null;
+			}
+
+			// Calculate positions for the first and last cells in the pattern
+			// This ensures the line covers the entire winning combination
 			const startRow = Math.floor(a / 3);
 			const startCol = a % 3;
 			const endRow = Math.floor(c / 3);
 			const endCol = c % 3;
 
+			// Calculate exact center positions
 			const startX = startCol * cellSize + cellSize / 2;
 			const startY = startRow * cellSize + cellSize / 2;
 			const endX = endCol * cellSize + cellSize / 2;
 			const endY = endRow * cellSize + cellSize / 2;
 
-			const centerX = (startX + endX) / 2;
-			const centerY = (startY + endY) / 2;
-			const length = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
-			const angle = Math.atan2(endY - startY, endX - startX) * (180 / Math.PI);
+			// Calculate line properties
+			const deltaX = endX - startX;
+			const deltaY = endY - startY;
+			const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+			const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
 
-			return {
+			// Calculate center position for the line
+			const centerX = startX + deltaX / 2;
+			const centerY = startY + deltaY / 2;
+
+			// Add a small buffer to ensure the line extends slightly beyond cell centers
+			const buffer = 2;
+			const adjustedLength = length + buffer * 2;
+
+			const lineStyle = {
 				position: 'absolute' as const,
-				left: centerX - length / 2,
-				top: centerY - 3,
-				width: length,
+				left: centerX - adjustedLength / 2,
+				top: centerY - 3, // Half the line height
+				width: adjustedLength,
 				height: 6,
 				backgroundColor: '#fbbf24',
 				borderRadius: 3,
 				transform: [{ rotate: `${angle}deg` }],
 			};
+
+			console.log('WinningLine: Calculated line style:', {
+				pattern: sortedPattern,
+				start: `(${startX}, ${startY})`,
+				end: `(${endX}, ${endY})`,
+				center: `(${centerX}, ${centerY})`,
+				length: length.toFixed(2),
+				adjustedLength: adjustedLength.toFixed(2),
+				angle: angle.toFixed(2),
+				position: `(${lineStyle.left}, ${lineStyle.top})`,
+				size: `${lineStyle.width}x${lineStyle.height}`,
+			});
+
+			return lineStyle;
 		} catch (error) {
 			console.error('Error calculating line style:', error);
 			return null;
 		}
 	}, [winPattern, cellSize]);
 
-	if (!isVisible || !winPattern) {
-		return null;
-	}
-
-	if (!isVisible || !lineStyle) {
+	if (!isVisible || !winPattern || !lineStyle) {
 		return null;
 	}
 

@@ -7,14 +7,17 @@ import {
 import * as Fonts from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-// import * as SystemUI from 'expo-system-ui';
+import * as SystemUI from 'expo-system-ui';
 import { AudioProvider } from '@/context/AudioProvider';
 import { ThemeProvider } from '@/context/ThemeProvider';
 import GameProvider from '@/context/GameProvider';
+import { AchievementsProvider } from '@/context/AchievementsProvider';
+import AchievementPopup from '@/components/AchievementPopup';
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import migrations from '@/drizzle/migrations';
 import { View } from 'react-native';
 import { db } from '@/db/connection';
+import { useDrizzleStudio } from 'expo-drizzle-studio-plugin';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -31,11 +34,11 @@ export default function RootLayout() {
 		console.error('Migration error:', error);
 	}
 
-	// React.useEffect(() => {
-	// 	SystemUI.setBackgroundColorAsync('transparent');
-	// 	SystemUI.setStatusBarStyleAsync('light');
-	// 	SystemUI.setStatusBarTranslucentAsync(true);
-	// }, []);
+	useDrizzleStudio(db.$client);
+
+	React.useEffect(() => {
+		SystemUI.setBackgroundColorAsync('transparent');
+	}, []);
 
 	React.useEffect(() => {
 		async function prepare() {
@@ -69,12 +72,15 @@ export default function RootLayout() {
 		<View style={{ flex: 1 }} onLayout={onLayoutRootView}>
 			<ThemeProvider>
 				<GameProvider>
-					<AudioProvider>
-						<Stack screenOptions={{ headerShown: false }}>
-							<Stack.Screen name='(home)' />
-							<Stack.Screen name='+not-found' />
-						</Stack>
-					</AudioProvider>
+					<AchievementsProvider>
+						<AudioProvider>
+							<Stack screenOptions={{ headerShown: false }}>
+								<Stack.Screen name='(home)' />
+								<Stack.Screen name='+not-found' />
+							</Stack>
+							<AchievementPopup />
+						</AudioProvider>
+					</AchievementsProvider>
 				</GameProvider>
 			</ThemeProvider>
 		</View>

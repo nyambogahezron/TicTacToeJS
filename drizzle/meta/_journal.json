@@ -15,6 +15,13 @@
       "when": 1751666470429,
       "tag": "0001_empty_tana_nile",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1751792447952,
+      "tag": "0002_worried_whirlwind",
+      "breakpoints": true
     }
   ]
 }

@@ -5,6 +5,7 @@ import {
 	Settings,
 	BarChart2,
 	Coins,
+	Award,
 } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -89,6 +90,11 @@ export default function GameHeader() {
 							{state.coins}
 						</Text>
 					</View>
+					<IconButton
+						icon={Award}
+						onPress={() => router.push('./achievements' as any)}
+						color='#10b981'
+					/>
 					<IconButton
 						icon={BarChart2}
 						onPress={() => router.push('/stats')}
