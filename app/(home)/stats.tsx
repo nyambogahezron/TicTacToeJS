@@ -6,7 +6,7 @@ import {
 	TouchableOpacity,
 	ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import {
@@ -29,6 +29,7 @@ export default function StatsScreen() {
 	const { colors } = useTheme();
 	const { state } = useGame();
 	const router = useRouter();
+	const insets = useSafeAreaInsets();
 	const [dbStats, setDbStats] = useState({
 		gamesPlayed: 0,
 		gamesWon: 0,
@@ -111,21 +112,25 @@ export default function StatsScreen() {
 			colors={['#0f172a', '#1e293b', '#334155']}
 			style={styles.container}
 		>
-			<SafeAreaView style={styles.safeArea}>
-				{/* Header with Back Button */}
-				<View style={styles.header}>
+			<View style={[styles.content, { paddingTop: insets.top }]}>
+				{/* Header */}
+				<Animated.View
+					entering={FadeInUp.springify()}
+					style={[styles.header, { borderBottomColor: colors.border }]}
+				>
 					<TouchableOpacity
-						style={[styles.backButton, { borderColor: colors.border }]}
+						style={[styles.backButton, { backgroundColor: colors.card }]}
 						onPress={() => router.back()}
 						activeOpacity={0.8}
 					>
-						<ArrowLeft size={20} color={colors.text} />
+						<ArrowLeft size={24} color={colors.cardText} />
 					</TouchableOpacity>
-					<Animated.Text entering={FadeInUp.springify()} style={styles.title}>
-						Your Statistics
-					</Animated.Text>
-					<View style={styles.placeholder} />
-				</View>
+					<View style={styles.headerTitle}>
+						<Text style={[styles.title, { color: colors.cardText }]}>
+							Your Statistics
+						</Text>
+					</View>
+				</Animated.View>
 
 				<ScrollView
 					style={styles.scrollView}
@@ -210,7 +215,7 @@ export default function StatsScreen() {
 						/>
 					</View>
 				</ScrollView>
-			</SafeAreaView>
+			</View>
 		</LinearGradient>
 	);
 }
@@ -219,16 +224,31 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 	},
-	safeArea: {
+	content: {
 		flex: 1,
 	},
 	header: {
 		flexDirection: 'row',
 		alignItems: 'center',
-		justifyContent: 'space-between',
-		marginBottom: 20,
 		paddingHorizontal: 20,
-		paddingTop: 10,
+		paddingTop: 20,
+		paddingBottom: 20,
+		borderBottomWidth: 1,
+	},
+	backButton: {
+		width: 44,
+		height: 44,
+		borderRadius: 22,
+		justifyContent: 'center',
+		alignItems: 'center',
+		marginRight: 16,
+	},
+	headerTitle: {
+		flex: 1,
+	},
+	title: {
+		fontSize: 28,
+		fontFamily: 'Inter-Bold',
 	},
 	scrollView: {
 		flex: 1,
@@ -236,30 +256,6 @@ const styles = StyleSheet.create({
 	scrollContent: {
 		paddingHorizontal: 20,
 		paddingBottom: 20,
-	},
-	content: {
-		flex: 1,
-		paddingHorizontal: 20,
-		paddingTop: 20,
-	},
-	backButton: {
-		backgroundColor: 'rgba(255, 255, 255, 0.1)',
-		width: 44,
-		height: 44,
-		borderRadius: 22,
-		justifyContent: 'center',
-		alignItems: 'center',
-		borderWidth: 1,
-	},
-	placeholder: {
-		width: 44,
-	},
-	title: {
-		fontSize: 28,
-		fontFamily: 'Inter-Bold',
-		color: '#fff',
-		textAlign: 'center',
-		flex: 1,
 	},
 	statsGrid: {
 		gap: 16,
@@ -299,6 +295,5 @@ const styles = StyleSheet.create({
 		fontSize: 12,
 		fontFamily: 'Inter-Regular',
 		color: '#64748b',
-		opacity: 0.8,
 	},
 });

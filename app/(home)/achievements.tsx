@@ -6,6 +6,8 @@ import {
 	ScrollView,
 	TouchableOpacity,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import {
 	ArrowLeft,
@@ -23,6 +25,7 @@ import { useAchievements } from '@/context/AchievementsProvider';
 export default function AchievementsScreen() {
 	const { colors } = useTheme();
 	const router = useRouter();
+	const insets = useSafeAreaInsets();
 	const {
 		achievements,
 		getAchievementsByCategory,
@@ -119,7 +122,7 @@ export default function AchievementsScreen() {
 						)}
 					</View>
 					<View style={styles.achievementInfo}>
-						<Text style={[styles.achievementTitle, { color: colors.text }]}>
+						<Text style={[styles.achievementTitle, { color: colors.cardText }]}>
 							{achievement.title}
 						</Text>
 						<Text
@@ -170,19 +173,25 @@ export default function AchievementsScreen() {
 				style={[
 					styles.categoryButton,
 					{
-						backgroundColor: isSelected ? colors.primary : colors.card,
-						borderColor: colors.border,
+						backgroundColor: isSelected ? colors.primary : '#1e293b',
+						borderColor: isSelected ? colors.primary : '#475569',
+						shadowColor: '#000',
+						shadowOffset: { width: 0, height: 2 },
+						shadowOpacity: 0.25,
+						shadowRadius: 4,
+						elevation: 3,
 					},
 				]}
 				onPress={() => setSelectedCategory(category.id)}
 				activeOpacity={0.8}
 			>
-				<Icon size={20} color={isSelected ? '#fff' : colors.text} />
+				<Icon size={20} color={isSelected ? '#fff' : '#e2e8f0'} />
 				<Text
 					style={[
 						styles.categoryText,
 						{
-							color: isSelected ? '#fff' : colors.text,
+							color: isSelected ? '#fff' : '#e2e8f0',
+							fontWeight: isSelected ? '600' : '500',
 						},
 					]}
 				>
@@ -193,58 +202,58 @@ export default function AchievementsScreen() {
 	};
 
 	return (
-		<View
-			style={[styles.container, { backgroundColor: colors.background as any }]}
-		>
-			{/* Header */}
-			<Animated.View
-				entering={FadeInUp.springify()}
-				style={[styles.header, { borderBottomColor: colors.border }]}
-			>
-				<TouchableOpacity
-					style={[styles.backButton, { backgroundColor: colors.card }]}
-					onPress={() => router.back()}
-					activeOpacity={0.8}
+		<LinearGradient colors={colors.background} style={styles.container}>
+			<View style={[styles.content, { paddingTop: insets.top }]}>
+				{/* Header */}
+				<Animated.View
+					entering={FadeInUp.springify()}
+					style={[styles.header, { borderBottomColor: colors.border }]}
 				>
-					<ArrowLeft size={24} color={colors.text} />
-				</TouchableOpacity>
-				<View style={styles.headerTitle}>
-					<Text style={[styles.title, { color: colors.text }]}>
-						Achievements
-					</Text>
-					<Text style={[styles.subtitle, { color: colors.cardSubtext }]}>
-						{getUnlockedCount()} of {getTotalCount()} unlocked
-					</Text>
-				</View>
-			</Animated.View>
+					<TouchableOpacity
+						style={[styles.backButton, { backgroundColor: colors.card }]}
+						onPress={() => router.back()}
+						activeOpacity={0.8}
+					>
+						<ArrowLeft size={24} color={colors.cardText} />
+					</TouchableOpacity>
+					<View style={styles.headerTitle}>
+						<Text style={[styles.title, { color: colors.cardText }]}>
+							Achievements
+						</Text>
+						<Text style={[styles.subtitle, { color: colors.cardSubtext }]}>
+							{getUnlockedCount()} of {getTotalCount()} unlocked
+						</Text>
+					</View>
+				</Animated.View>
 
-			{/* Category Filter */}
-			<ScrollView
-				horizontal
-				showsHorizontalScrollIndicator={false}
-				style={styles.categoriesContainer}
-				contentContainerStyle={styles.categoriesContent}
-			>
-				{categories.map((category) => (
-					<CategoryButton key={category.id} category={category} />
-				))}
-			</ScrollView>
+				{/* Category Filter */}
+				<ScrollView
+					horizontal
+					showsHorizontalScrollIndicator={false}
+					style={styles.categoriesContainer}
+					contentContainerStyle={styles.categoriesContent}
+				>
+					{categories.map((category) => (
+						<CategoryButton key={category.id} category={category} />
+					))}
+				</ScrollView>
 
-			{/* Achievements List */}
-			<ScrollView
-				style={styles.achievementsList}
-				contentContainerStyle={styles.achievementsContent}
-				showsVerticalScrollIndicator={false}
-			>
-				{getFilteredAchievements().map((achievement, index) => (
-					<AchievementCard
-						key={achievement.id}
-						achievement={achievement}
-						index={index}
-					/>
-				))}
-			</ScrollView>
-		</View>
+				{/* Achievements List */}
+				<ScrollView
+					style={styles.achievementsList}
+					contentContainerStyle={styles.achievementsContent}
+					showsVerticalScrollIndicator={false}
+				>
+					{getFilteredAchievements().map((achievement, index) => (
+						<AchievementCard
+							key={achievement.id}
+							achievement={achievement}
+							index={index}
+						/>
+					))}
+				</ScrollView>
+			</View>
+		</LinearGradient>
 	);
 }
 
@@ -252,11 +261,14 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 	},
+	content: {
+		flex: 1,
+	},
 	header: {
 		flexDirection: 'row',
 		alignItems: 'center',
 		paddingHorizontal: 20,
-		paddingTop: 60,
+		paddingTop: 20,
 		paddingBottom: 20,
 		borderBottomWidth: 1,
 	},
@@ -283,6 +295,7 @@ const styles = StyleSheet.create({
 	categoriesContainer: {
 		paddingHorizontal: 20,
 		paddingVertical: 16,
+		maxHeight: 80,
 	},
 	categoriesContent: {
 		gap: 12,
@@ -291,10 +304,12 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		alignItems: 'center',
 		paddingHorizontal: 16,
-		paddingVertical: 10,
+		paddingVertical: 12,
 		borderRadius: 20,
 		borderWidth: 1,
 		gap: 8,
+		minHeight: 44,
+		minWidth: 80,
 	},
 	categoryText: {
 		fontSize: 14,
@@ -303,10 +318,12 @@ const styles = StyleSheet.create({
 	achievementsList: {
 		flex: 1,
 		paddingHorizontal: 20,
+		paddingTop: 0,
 	},
 	achievementsContent: {
 		gap: 16,
 		paddingBottom: 20,
+		paddingTop: 8,
 	},
 	achievementCard: {
 		borderRadius: 16,
@@ -320,11 +337,15 @@ const styles = StyleSheet.create({
 		shadowOpacity: 0.1,
 		shadowRadius: 3,
 		elevation: 3,
+		minHeight: 100,
+		maxHeight: 140,
 	},
 	achievementHeader: {
 		flexDirection: 'row',
 		alignItems: 'center',
 		marginBottom: 12,
+		minHeight: 60,
+		maxHeight: 80,
 	},
 	achievementIconContainer: {
 		width: 60,
@@ -350,6 +371,8 @@ const styles = StyleSheet.create({
 	},
 	achievementInfo: {
 		flex: 1,
+		justifyContent: 'center',
+		paddingVertical: 4,
 	},
 	achievementTitle: {
 		fontSize: 18,

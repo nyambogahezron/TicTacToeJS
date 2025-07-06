@@ -8,7 +8,7 @@ import {
 	ScrollView,
 	Linking,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import {
@@ -28,6 +28,7 @@ export default function SettingsScreen() {
 	const { soundEnabled, hapticEnabled, toggleSound, toggleHaptic } = useAudio();
 	const { isDarkMode, toggleTheme, colors } = useTheme();
 	const router = useRouter();
+	const insets = useSafeAreaInsets();
 	const [aiDifficulty, setAiDifficulty] = React.useState(true);
 
 	const SettingItem = ({
@@ -66,25 +67,31 @@ export default function SettingsScreen() {
 
 	return (
 		<LinearGradient colors={colors.background} style={styles.container}>
-			<SafeAreaView style={styles.safeArea}>
-				<ScrollView style={styles.content}>
-					<View style={styles.header}>
-						<TouchableOpacity
-							style={styles.backButton}
-							onPress={() => router.back()}
-							activeOpacity={0.8}
-						>
-							<ArrowLeft size={24} color={colors.text} />
-						</TouchableOpacity>
-						<Animated.Text
-							entering={FadeInUp.springify()}
-							style={[styles.title, { color: colors.text }]}
-						>
+			<View style={[styles.content, { paddingTop: insets.top }]}>
+				{/* Header */}
+				<Animated.View
+					entering={FadeInUp.springify()}
+					style={[styles.header, { borderBottomColor: colors.border }]}
+				>
+					<TouchableOpacity
+						style={[styles.backButton, { backgroundColor: colors.card }]}
+						onPress={() => router.back()}
+						activeOpacity={0.8}
+					>
+						<ArrowLeft size={24} color={colors.cardText} />
+					</TouchableOpacity>
+					<View style={styles.headerTitle}>
+						<Text style={[styles.title, { color: colors.cardText }]}>
 							Settings
-						</Animated.Text>
-						<View style={styles.backButton} />
+						</Text>
 					</View>
+				</Animated.View>
 
+				<ScrollView
+					style={styles.scrollView}
+					contentContainerStyle={styles.scrollContent}
+					showsVerticalScrollIndicator={false}
+				>
 					<View style={styles.settingsContainer}>
 						<SettingItem
 							icon={Volume2}
@@ -148,7 +155,7 @@ export default function SettingsScreen() {
 						</Animated.View>
 					</View>
 				</ScrollView>
-			</SafeAreaView>
+			</View>
 		</LinearGradient>
 	);
 }
@@ -157,34 +164,42 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 	},
-	safeArea: {
-		flex: 1,
-	},
 	content: {
 		flex: 1,
-		paddingHorizontal: 20,
-		paddingTop: 20,
-		paddingBottom: 60,
 	},
 	header: {
 		flexDirection: 'row',
 		alignItems: 'center',
-		justifyContent: 'space-between',
-		marginBottom: 40,
+		paddingHorizontal: 20,
+		paddingTop: 20,
+		paddingBottom: 20,
+		borderBottomWidth: 1,
 	},
 	backButton: {
-		width: 40,
-		height: 40,
-		alignItems: 'center',
+		width: 44,
+		height: 44,
+		borderRadius: 22,
 		justifyContent: 'center',
+		alignItems: 'center',
+		marginRight: 16,
+	},
+	headerTitle: {
+		flex: 1,
 	},
 	title: {
-		fontSize: 32,
+		fontSize: 28,
 		fontFamily: 'Inter-Bold',
-		textAlign: 'center',
+	},
+	scrollView: {
+		flex: 1,
+	},
+	scrollContent: {
+		paddingHorizontal: 20,
+		paddingBottom: 40,
 	},
 	settingsContainer: {
 		gap: 16,
+		marginTop: 20,
 	},
 	settingCard: {
 		borderRadius: 16,

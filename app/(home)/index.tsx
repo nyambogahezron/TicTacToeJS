@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import GameBoard from '@/components/GameBoard';
 import GameHeader from '@/components/GameHeader';
@@ -13,6 +13,7 @@ import { useTheme } from '@/context/ThemeProvider';
 const GameScreen = memo(function GameScreen() {
 	const { state, dispatch } = useGame();
 	const { colors } = useTheme();
+	const insets = useSafeAreaInsets();
 	const [coinPopup, setCoinPopup] = useState<{ amount: number } | null>(null);
 	const [prevCoins, setPrevCoins] = useState(state.coins);
 
@@ -37,9 +38,9 @@ const GameScreen = memo(function GameScreen() {
 
 	return (
 		<LinearGradient colors={colors.background} style={styles.container}>
-			<SafeAreaView style={styles.safeArea}>
+			<View style={[styles.content, { paddingTop: insets.top }]}>
 				<TouchableOpacity
-					style={styles.content}
+					style={styles.gameArea}
 					activeOpacity={1}
 					onPress={handleOverlayPress}
 				>
@@ -55,7 +56,7 @@ const GameScreen = memo(function GameScreen() {
 						/>
 					)}
 				</TouchableOpacity>
-			</SafeAreaView>
+			</View>
 		</LinearGradient>
 	);
 });
@@ -66,11 +67,11 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 	},
-	safeArea: {
-		flex: 1,
-	},
 	content: {
 		flex: 1,
 		padding: 20,
+	},
+	gameArea: {
+		flex: 1,
 	},
 });
