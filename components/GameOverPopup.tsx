@@ -40,7 +40,7 @@ export default function GameOverPopup() {
 
 			playGameEndEffects();
 		}
-	}, [state.winner]);
+	}, [state.winner, playSound, triggerHaptic, scale]);
 
 	const animatedStyle = useAnimatedStyle(() => ({
 		transform: [{ scale: scale.value }],
@@ -69,7 +69,7 @@ export default function GameOverPopup() {
 
 	return (
 		<Animated.View entering={FadeIn} exiting={FadeOut} style={styles.overlay}>
-			<BlurView intensity={20} style={styles.blur}>
+			<BlurView intensity={40} style={styles.blur}>
 				<Animated.View
 					entering={SlideInDown.springify()}
 					exiting={SlideOutDown.springify()}
@@ -106,6 +106,7 @@ const styles = StyleSheet.create({
 		...StyleSheet.absoluteFillObject,
 		justifyContent: 'center',
 		alignItems: 'center',
+		backgroundColor: 'rgba(0, 0, 0, 0.5)',
 		zIndex: 1000,
 	},
 	blur: {

@@ -6,11 +6,19 @@ import {
 	Switch,
 	TouchableOpacity,
 	ScrollView,
+	Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { Volume2, Vibrate, Bot, Moon, ArrowLeft } from 'lucide-react-native';
+import {
+	Volume2,
+	Vibrate,
+	Bot,
+	Moon,
+	ArrowLeft,
+	ExternalLink,
+} from 'lucide-react-native';
 import { useAudio } from '@/context/AudioProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { useRouter } from 'expo-router';
@@ -113,6 +121,32 @@ export default function SettingsScreen() {
 					</View>
 
 					<DetailedLevelSelector />
+
+					{/* Footer Section */}
+					<View style={styles.footer}>
+						<Animated.View
+							entering={FadeInUp.delay(400).springify()}
+							style={[styles.footerCard, { backgroundColor: colors.card }]}
+						>
+							<Text style={[styles.versionText, { color: colors.cardSubtext }]}>
+								Version 1.0.0
+							</Text>
+							<TouchableOpacity
+								style={styles.developerLink}
+								onPress={() =>
+									Linking.openURL('https://github.com/nyambogahezron')
+								}
+								activeOpacity={0.7}
+							>
+								<ExternalLink size={16} color={colors.cardSubtext} />
+								<Text
+									style={[styles.developerText, { color: colors.cardSubtext }]}
+								>
+									Developer
+								</Text>
+							</TouchableOpacity>
+						</Animated.View>
+					</View>
 				</ScrollView>
 			</SafeAreaView>
 		</LinearGradient>
@@ -130,7 +164,7 @@ const styles = StyleSheet.create({
 		flex: 1,
 		paddingHorizontal: 20,
 		paddingTop: 20,
-		paddingBottom: 40,
+		paddingBottom: 60,
 	},
 	header: {
 		flexDirection: 'row',
@@ -173,5 +207,30 @@ const styles = StyleSheet.create({
 	settingDescription: {
 		fontSize: 14,
 		fontFamily: 'Inter-Regular',
+	},
+	footer: {
+		marginTop: 40,
+		paddingBottom: 40,
+	},
+	footerCard: {
+		borderRadius: 16,
+		padding: 20,
+		alignItems: 'center',
+		backdropFilter: 'blur(10px)',
+		gap: 12,
+	},
+	versionText: {
+		fontSize: 14,
+		fontFamily: 'Inter-Medium',
+	},
+	developerLink: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 6,
+	},
+	developerText: {
+		fontSize: 14,
+		fontFamily: 'Inter-Regular',
+		textDecorationLine: 'underline',
 	},
 });

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useMemo, useCallback } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, {
 	useAnimatedStyle,
@@ -20,7 +20,7 @@ interface GameCellProps {
 	};
 }
 
-export default function GameCell({
+const GameCell = memo(function GameCell({
 	index,
 	value,
 	size,
@@ -30,6 +30,22 @@ export default function GameCell({
 	const { dispatch, state } = useGame();
 	const { playSound, triggerHaptic } = useAudio();
 	const opacity = useSharedValue(value ? 1 : 0);
+
+	// Helper function to get adjacent cells
+	const getAdjacentCells = useCallback((cellIndex: number): number[] => {
+		const adjacencyMap: { [key: number]: number[] } = {
+			0: [1, 3, 4],
+			1: [0, 2, 3, 4, 5],
+			2: [1, 4, 5],
+			3: [0, 1, 4, 6, 7],
+			4: [0, 1, 2, 3, 5, 6, 7, 8],
+			5: [1, 2, 4, 7, 8],
+			6: [3, 4, 7],
+			7: [3, 4, 5, 6, 8],
+			8: [4, 5, 7],
+		};
+		return adjacencyMap[cellIndex] || [];
+	}, []);
 
 	const textAnimatedStyle = useAnimatedStyle(() => ({
 		opacity: opacity.value,
@@ -42,7 +58,7 @@ export default function GameCell({
 		}
 	}, [value, opacity]);
 
-	const handlePress = async () => {
+	const handlePress = useCallback(async () => {
 		if (disabled) return;
 
 		// Level 1: Classic Tic-Tac-Toe - simple placement
@@ -111,15 +127,27 @@ export default function GameCell({
 				}
 			}
 		}
-	};
+	}, [
+		disabled,
+		value,
+		state.gameLevel,
+		state.gamePhase,
+		state.currentPlayer,
+		state.selectedPiece,
+		playSound,
+		triggerHaptic,
+		dispatch,
+		index,
+		getAdjacentCells,
+	]);
 
-	const getTextColor = () => {
+	const getTextColor = useCallback(() => {
 		if (value === 'X') return '#10b981';
 		if (value === 'O') return '#ef4444';
 		return '#fff';
-	};
+	}, [value]);
 
-	const getBackgroundColor = () => {
+	const getBackgroundColor = useCallback(() => {
 		// Highlight selected piece
 		if (state.selectedPiece === index) {
 			return '#fbbf24' + '30'; // Yellow with transparency for selected
@@ -138,53 +166,45 @@ export default function GameCell({
 		}
 
 		return 'transparent'; // Clean background
-	};
+	}, [state.selectedPiece, value, state.gamePhase, getAdjacentCells, index]);
 
-	// Helper function to get adjacent cells (same as in GameProvider)
-	const getAdjacentCells = (cellIndex: number): number[] => {
-		const adjacencyMap: { [key: number]: number[] } = {
-			0: [1, 3, 4],
-			1: [0, 2, 3, 4, 5],
-			2: [1, 4, 5],
-			3: [0, 1, 4, 6, 7],
-			4: [0, 1, 2, 3, 5, 6, 7, 8],
-			5: [1, 2, 4, 7, 8],
-			6: [3, 4, 7],
-			7: [3, 4, 5, 6, 8],
-			8: [4, 5, 7],
-		};
-		return adjacencyMap[cellIndex] || [];
-	};
+	const cellStyle = useMemo(
+		() => [
+			styles.cell,
+			{
+				width: size,
+				height: size,
+				backgroundColor: getBackgroundColor(),
+				...cellBorders,
+			},
+		],
+		[size, getBackgroundColor, cellBorders]
+	);
+
+	const textStyle = useMemo(
+		() => [
+			styles.cellText,
+			textAnimatedStyle,
+			{ color: getTextColor(), fontSize: size * 0.4 },
+		],
+		[textAnimatedStyle, getTextColor, size]
+	);
 
 	return (
 		<Animated.View>
 			<TouchableOpacity
-				style={[
-					styles.cell,
-					{
-						width: size,
-						height: size,
-						backgroundColor: getBackgroundColor(),
-						...cellBorders,
-					},
-				]}
+				style={cellStyle}
 				onPress={handlePress}
 				disabled={disabled}
 				activeOpacity={0.8}
 			>
-				<Animated.Text
-					style={[
-						styles.cellText,
-						textAnimatedStyle,
-						{ color: getTextColor(), fontSize: size * 0.4 },
-					]}
-				>
-					{value}
-				</Animated.Text>
+				<Animated.Text style={textStyle}>{value}</Animated.Text>
 			</TouchableOpacity>
 		</Animated.View>
 	);
-}
+});
+
+export default GameCell;
 
 const styles = StyleSheet.create({
 	cell: {

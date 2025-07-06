@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,13 +10,13 @@ import LevelSelector from '@/components/LevelSelector';
 import { useGame } from '@/context/GameProvider';
 import { useTheme } from '@/context/ThemeProvider';
 
-export default function GameScreen() {
+const GameScreen = memo(function GameScreen() {
 	const { state, dispatch } = useGame();
 	const { colors } = useTheme();
 	const [coinPopup, setCoinPopup] = useState<{ amount: number } | null>(null);
 	const [prevCoins, setPrevCoins] = useState(state.coins);
 
-	// Track coin changes and show popup
+	// Track coin changes and show popup with better performance
 	useEffect(() => {
 		if (state.coins > prevCoins) {
 			const earnedCoins = state.coins - prevCoins;
@@ -25,11 +25,11 @@ export default function GameScreen() {
 		setPrevCoins(state.coins);
 	}, [state.coins, prevCoins]);
 
-	const handleOverlayPress = () => {
+	const handleOverlayPress = useCallback(() => {
 		if (state.winner) {
 			dispatch({ type: 'RESET_GAME' });
 		}
-	};
+	}, [state.winner, dispatch]);
 
 	const handleCoinPopupComplete = useCallback(() => {
 		setCoinPopup(null);
@@ -49,7 +49,7 @@ export default function GameScreen() {
 					<GameOverPopup />
 					{coinPopup && (
 						<CoinPopup
-							key={coinPopup.amount}
+							key={`coin-${coinPopup.amount}-${Date.now()}`}
 							amount={coinPopup.amount}
 							onComplete={handleCoinPopupComplete}
 						/>
@@ -58,7 +58,9 @@ export default function GameScreen() {
 			</SafeAreaView>
 		</LinearGradient>
 	);
-}
+});
+
+export default GameScreen;
 
 const styles = StyleSheet.create({
 	container: {

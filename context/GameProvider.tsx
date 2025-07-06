@@ -5,6 +5,7 @@ import React, {
 	ReactNode,
 	useEffect,
 	useState,
+	useMemo,
 } from 'react';
 import {
 	getCoins,
@@ -623,6 +624,9 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 	const [state, dispatch] = useReducer(gameReducer, initialState);
 	const [isLoading, setIsLoading] = useState(true);
 
+	// Memoize context value to prevent unnecessary re-renders
+	const contextValue = useMemo(() => ({ state, dispatch }), [state, dispatch]);
+
 	// Load saved game state from database
 	useEffect(() => {
 		const loadGameState = async () => {
@@ -751,9 +755,7 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 	}
 
 	return (
-		<GameContext.Provider value={{ state, dispatch }}>
-			{children}
-		</GameContext.Provider>
+		<GameContext.Provider value={contextValue}>{children}</GameContext.Provider>
 	);
 }
 

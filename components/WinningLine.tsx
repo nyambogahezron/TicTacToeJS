@@ -1,4 +1,11 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, {
+	useEffect,
+	useState,
+	useRef,
+	memo,
+	useMemo,
+	useCallback,
+} from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
 	useAnimatedStyle,
@@ -12,7 +19,7 @@ interface WinningLineProps {
 	onAnimationComplete: () => void;
 }
 
-export default function WinningLine({
+const WinningLine = memo(function WinningLine({
 	winPattern,
 	cellSize,
 	onAnimationComplete,
@@ -30,24 +37,27 @@ export default function WinningLine({
 		};
 	}, []);
 
+	const triggerAnimation = useCallback(() => {
+		if (completionTimeoutRef.current) {
+			clearTimeout(completionTimeoutRef.current);
+		}
+		// Reset animation values
+		scaleX.value = 0;
+		opacity.value = 0;
+
+		opacity.value = withTiming(1, { duration: 300 });
+		scaleX.value = withTiming(1, { duration: 800 });
+
+		completionTimeoutRef.current = setTimeout(() => {
+			onAnimationComplete();
+			completionTimeoutRef.current = null;
+		}, 2300);
+	}, [onAnimationComplete, opacity, scaleX]);
+
 	useEffect(() => {
 		if (winPattern) {
 			setIsVisible(true);
-
-			if (completionTimeoutRef.current) {
-				clearTimeout(completionTimeoutRef.current);
-			}
-			// Reset animation values
-			scaleX.value = 0;
-			opacity.value = 0;
-
-			opacity.value = withTiming(1, { duration: 300 });
-			scaleX.value = withTiming(1, { duration: 800 });
-
-			completionTimeoutRef.current = setTimeout(() => {
-				onAnimationComplete();
-				completionTimeoutRef.current = null;
-			}, 2300);
+			triggerAnimation();
 		} else {
 			setIsVisible(false);
 			if (completionTimeoutRef.current) {
@@ -55,18 +65,16 @@ export default function WinningLine({
 				completionTimeoutRef.current = null;
 			}
 		}
-	}, [winPattern, onAnimationComplete, opacity, scaleX]);
+	}, [winPattern, triggerAnimation]);
 
 	const animatedStyle = useAnimatedStyle(() => ({
 		opacity: opacity.value,
 		transform: [{ scaleX: scaleX.value }],
 	}));
 
-	if (!isVisible || !winPattern) {
-		return null;
-	}
+	const lineStyle = useMemo(() => {
+		if (!winPattern) return null;
 
-	const getLineStyle = () => {
 		try {
 			const [a, , c] = winPattern;
 
@@ -99,11 +107,13 @@ export default function WinningLine({
 			console.error('Error calculating line style:', error);
 			return null;
 		}
-	};
+	}, [winPattern, cellSize]);
 
-	const lineStyle = getLineStyle();
+	if (!isVisible || !winPattern) {
+		return null;
+	}
 
-	if (!lineStyle) {
+	if (!isVisible || !lineStyle) {
 		return null;
 	}
 
@@ -112,7 +122,9 @@ export default function WinningLine({
 			<Animated.View style={[lineStyle, animatedStyle]} />
 		</View>
 	);
-}
+});
+
+export default WinningLine;
 
 const styles = StyleSheet.create({
 	container: {

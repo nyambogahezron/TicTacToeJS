@@ -1,25 +1,21 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, {
+	createContext,
+	useContext,
+	useEffect,
+	useState,
+	useCallback,
+	useRef,
+} from 'react';
 import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-interface AudioContextType {
-	soundEnabled: boolean;
-	hapticEnabled: boolean;
-	toggleSound: () => void;
-	toggleHaptic: () => void;
-	playSound: (type: 'move' | 'win' | 'draw' | 'reset') => Promise<void>;
-	triggerHaptic: (
-		type: 'light' | 'medium' | 'heavy' | 'success' | 'error'
-	) => Promise<void>;
-}
 
 const AudioContext = createContext<AudioContextType | null>(null);
 
 export function AudioProvider({ children }: { children: React.ReactNode }) {
 	const [soundEnabled, setSoundEnabled] = useState(true);
 	const [hapticEnabled, setHapticEnabled] = useState(true);
-	const [sounds, setSounds] = useState<Record<string, Audio.Sound>>({});
+	const soundsRef = useRef<Record<string, Audio.Sound>>({});
 
 	// Load settings from storage
 	useEffect(() => {
@@ -38,45 +34,56 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 		loadSettings();
 	}, []);
 
-	// Load sound effects
+	// Load sound effects with better memory management
 	useEffect(() => {
 		const loadSounds = async () => {
 			try {
-				const moveSound = await Audio.Sound.createAsync(
-					require('../assets/sounds/move.mp3')
-				);
-				const winSound = await Audio.Sound.createAsync(
-					require('../assets/sounds/win.mp3')
-				);
-				const drawSound = await Audio.Sound.createAsync(
-					require('../assets/sounds/draw.mp3')
-				);
-				const resetSound = await Audio.Sound.createAsync(
-					require('../assets/sounds/reset.mp3')
-				);
-
-				setSounds({
-					move: moveSound.sound,
-					win: winSound.sound,
-					draw: drawSound.sound,
-					reset: resetSound.sound,
+				// Set audio mode for better performance
+				await Audio.setAudioModeAsync({
+					allowsRecordingIOS: false,
+					staysActiveInBackground: false,
+					playsInSilentModeIOS: true,
+					shouldDuckAndroid: true,
+					playThroughEarpieceAndroid: false,
 				});
+
+				const soundFiles = {
+					move: require('../assets/sounds/move.mp3'),
+					win: require('../assets/sounds/win.mp3'),
+					draw: require('../assets/sounds/draw.mp3'),
+					reset: require('../assets/sounds/reset.mp3'),
+				};
+
+				const loadedSounds: Record<string, Audio.Sound> = {};
+
+				for (const [key, file] of Object.entries(soundFiles)) {
+					const { sound } = await Audio.Sound.createAsync(file, {
+						shouldPlay: false,
+						isLooping: false,
+						volume: 0.5,
+					});
+					loadedSounds[key] = sound;
+				}
+
+				soundsRef.current = loadedSounds;
 			} catch (error) {
 				console.error('Error loading sounds:', error);
 			}
 		};
 
 		loadSounds();
+	}, []);
 
-		// Cleanup
+	useEffect(() => {
 		return () => {
-			Object.values(sounds).forEach((sound) => {
-				sound.unloadAsync();
+			// Cleanup sounds on unmount
+			Object.values(soundsRef.current).forEach((sound) => {
+				sound.unloadAsync().catch(console.error);
 			});
 		};
 	}, []);
 
-	const toggleSound = async () => {
+	const toggleSound = useCallback(async () => {
 		const newValue = !soundEnabled;
 		setSoundEnabled(newValue);
 		try {
@@ -84,9 +91,9 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 		} catch (error) {
 			console.error('Error saving sound setting:', error);
 		}
-	};
+	}, [soundEnabled]);
 
-	const toggleHaptic = async () => {
+	const toggleHaptic = useCallback(async () => {
 		const newValue = !hapticEnabled;
 		setHapticEnabled(newValue);
 		try {
@@ -94,50 +101,55 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 		} catch (error) {
 			console.error('Error saving haptic setting:', error);
 		}
-	};
+	}, [hapticEnabled]);
 
-	const playSound = async (type: 'move' | 'win' | 'draw' | 'reset') => {
-		if (!soundEnabled || !sounds[type]) return;
+	const playSound = useCallback(
+		async (type: 'move' | 'win' | 'draw' | 'reset') => {
+			if (!soundEnabled || !soundsRef.current[type]) return;
 
-		try {
-			await sounds[type].setPositionAsync(0);
-			await sounds[type].playAsync();
-		} catch (error) {
-			console.error('Error playing sound:', error);
-		}
-	};
-
-	const triggerHaptic = async (
-		type: 'light' | 'medium' | 'heavy' | 'success' | 'error'
-	) => {
-		if (!hapticEnabled) return;
-
-		try {
-			switch (type) {
-				case 'light':
-					await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-					break;
-				case 'medium':
-					await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-					break;
-				case 'heavy':
-					await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-					break;
-				case 'success':
-					await Haptics.notificationAsync(
-						Haptics.NotificationFeedbackType.Success
-					);
-					break;
-				case 'error':
-					await Haptics.notificationAsync(
-						Haptics.NotificationFeedbackType.Error
-					);
-					break;
+			try {
+				const sound = soundsRef.current[type];
+				await sound.setPositionAsync(0);
+				await sound.playAsync();
+			} catch (error) {
+				console.error('Error playing sound:', error);
 			}
-		} catch (error) {
-			console.error('Error triggering haptic:', error);
-		}
-	};
+		},
+		[soundEnabled]
+	);
+
+	const triggerHaptic = useCallback(
+		async (type: 'light' | 'medium' | 'heavy' | 'success' | 'error') => {
+			if (!hapticEnabled) return;
+
+			try {
+				switch (type) {
+					case 'light':
+						await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+						break;
+					case 'medium':
+						await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+						break;
+					case 'heavy':
+						await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+						break;
+					case 'success':
+						await Haptics.notificationAsync(
+							Haptics.NotificationFeedbackType.Success
+						);
+						break;
+					case 'error':
+						await Haptics.notificationAsync(
+							Haptics.NotificationFeedbackType.Error
+						);
+						break;
+				}
+			} catch (error) {
+				console.error('Error triggering haptic:', error);
+			}
+		},
+		[hapticEnabled]
+	);
 
 	return (
 		<AudioContext.Provider

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, memo, useCallback, useMemo } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import GameCell from './GameCell';
@@ -10,7 +10,7 @@ const { width } = Dimensions.get('window');
 const boardSize = Math.min(width - 60, 280);
 const cellSize = boardSize / 3;
 
-export default function GameBoard() {
+const GameBoard = memo(function GameBoard() {
 	const { state, dispatch } = useGame();
 	const { colors } = useTheme();
 	const timeoutRef = useRef<number | null>(null);
@@ -24,7 +24,7 @@ export default function GameBoard() {
 		};
 	}, []);
 
-	const handleWinningLineComplete = () => {
+	const handleWinningLineComplete = useCallback(() => {
 		try {
 			// Clear any existing timeout
 			if (timeoutRef.current) {
@@ -43,31 +43,46 @@ export default function GameBoard() {
 			// Fallback: still reset the game even if there's an error
 			dispatch({ type: 'RESET_GAME' });
 		}
-	};
+	}, [state.winner, dispatch]);
 
 	// Helper function to determine which borders a cell should have
-	const getCellBorders = (index: number) => {
-		const row = Math.floor(index / 3);
-		const col = index % 3;
+	const getCellBorders = useCallback(
+		(index: number) => {
+			const row = Math.floor(index / 3);
+			const col = index % 3;
 
-		return {
-			borderRightWidth: col < 2 ? 2 : 0, // Right border for first two columns
-			borderBottomWidth: row < 2 ? 2 : 0, // Bottom border for first two rows
-			borderColor: colors.border,
-		};
-	};
+			return {
+				borderRightWidth: col < 2 ? 2 : 0, // Right border for first two columns
+				borderBottomWidth: row < 2 ? 2 : 0, // Bottom border for first two rows
+				borderColor: colors.border,
+			};
+		},
+		[colors.border]
+	);
+
+	const boardStyle = useMemo(
+		() => [
+			styles.board,
+			{
+				width: boardSize,
+				height: boardSize,
+			},
+		],
+		[]
+	);
+
+	const isDisabled = useMemo(
+		() =>
+			!state.isGameActive ||
+			(state.gameMode === 'vsAI' && state.currentPlayer === 'O'),
+		[state.isGameActive, state.gameMode, state.currentPlayer]
+	);
 
 	return (
 		<View style={styles.container}>
 			<Animated.View
 				entering={FadeInUp.delay(200).springify()}
-				style={[
-					styles.board,
-					{
-						width: boardSize,
-						height: boardSize,
-					},
-				]}
+				style={boardStyle}
 			>
 				{state.board.map((cell, index) => (
 					<GameCell
@@ -76,10 +91,7 @@ export default function GameBoard() {
 						value={cell}
 						size={cellSize}
 						cellBorders={getCellBorders(index)}
-						disabled={
-							!state.isGameActive ||
-							(state.gameMode === 'vsAI' && state.currentPlayer === 'O')
-						}
+						disabled={isDisabled}
 					/>
 				))}
 
@@ -94,7 +106,9 @@ export default function GameBoard() {
 			</Animated.View>
 		</View>
 	);
-}
+});
+
+export default GameBoard;
 
 const styles = StyleSheet.create({
 	container: {

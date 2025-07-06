@@ -2,13 +2,9 @@ import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Animated, {
-	FadeIn,
-	FadeOut,
 	SlideInDown,
-	SlideOutDown,
 	useAnimatedStyle,
 	useSharedValue,
-	withSequence,
 	withSpring,
 	withTiming,
 	runOnJS,
@@ -40,10 +36,10 @@ export default function CoinPopup({ amount, onComplete }: CoinPopupProps) {
 					runOnJS(onComplete)();
 				}
 			});
-		}, 1500);
+		}, 3000);
 
 		return () => clearTimeout(timer);
-	}, [onComplete]);
+	}, [onComplete, scale, translateY, opacity]);
 
 	const animatedStyle = useAnimatedStyle(() => ({
 		transform: [{ scale: scale.value }, { translateY: translateY.value }],
@@ -55,16 +51,20 @@ export default function CoinPopup({ amount, onComplete }: CoinPopupProps) {
 			entering={SlideInDown.springify()}
 			style={[styles.container, animatedStyle]}
 		>
-			<BlurView intensity={20} style={styles.blur}>
-				<View style={[styles.content, { backgroundColor: colors.card }]}>
-					<View style={[styles.iconContainer, { backgroundColor: '#f59e0b' }]}>
-						<Coins size={24} color='#fff' />
+			<View style={styles.backdrop}>
+				<BlurView intensity={40} style={styles.blur}>
+					<View style={[styles.content, { backgroundColor: colors.card }]}>
+						<View
+							style={[styles.iconContainer, { backgroundColor: '#f59e0b' }]}
+						>
+							<Coins size={24} color='#fff' />
+						</View>
+						<Text style={[styles.text, { color: colors.text }]}>
+							+{amount} coins
+						</Text>
 					</View>
-					<Text style={[styles.text, { color: colors.text }]}>
-						+{amount} coins
-					</Text>
-				</View>
-			</BlurView>
+				</BlurView>
+			</View>
 		</Animated.View>
 	);
 }
@@ -78,6 +78,12 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		zIndex: 1000,
 	},
+	backdrop: {
+		backgroundColor: 'rgba(0, 0, 0, 0.3)',
+		borderRadius: 24,
+		paddingHorizontal: 4,
+		paddingVertical: 4,
+	},
 	blur: {
 		borderRadius: 20,
 		overflow: 'hidden',
@@ -90,7 +96,7 @@ const styles = StyleSheet.create({
 		gap: 8,
 		borderRadius: 20,
 		borderWidth: 1,
-		borderColor: 'rgba(255, 255, 255, 0.1)',
+		borderColor: 'rgba(255, 255, 255, 0.3)',
 	},
 	iconContainer: {
 		width: 32,
