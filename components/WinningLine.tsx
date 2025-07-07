@@ -38,7 +38,6 @@ const WinningLine = memo(function WinningLine({
 	}, []);
 
 	const triggerAnimation = useCallback(() => {
-		console.log('WinningLine: Triggering animation');
 		if (completionTimeoutRef.current) {
 			clearTimeout(completionTimeoutRef.current);
 		}
@@ -50,9 +49,6 @@ const WinningLine = memo(function WinningLine({
 		scaleX.value = withTiming(1, { duration: 800 });
 
 		completionTimeoutRef.current = setTimeout(() => {
-			console.log(
-				'WinningLine: Animation complete, calling onAnimationComplete'
-			);
 			onAnimationComplete();
 			completionTimeoutRef.current = null;
 		}, 2300);
@@ -60,12 +56,9 @@ const WinningLine = memo(function WinningLine({
 
 	useEffect(() => {
 		if (winPattern) {
-			console.log('WinningLine: New winning pattern detected:', winPattern);
-			console.log('WinningLine: Cell size:', cellSize);
 			setIsVisible(true);
 			triggerAnimation();
 		} else {
-			console.log('WinningLine: No winning pattern, hiding line');
 			setIsVisible(false);
 			if (completionTimeoutRef.current) {
 				clearTimeout(completionTimeoutRef.current);
@@ -92,13 +85,19 @@ const WinningLine = memo(function WinningLine({
 
 			// Validate pattern indices
 			if (a < 0 || a > 8 || b < 0 || b > 8 || c < 0 || c > 8) {
-				console.error('WinningLine: Invalid winning pattern indices:', sortedPattern);
+				console.error(
+					'WinningLine: Invalid winning pattern indices:',
+					sortedPattern
+				);
 				return null;
 			}
 
 			// Validate that all indices are unique
 			if (a === b || b === c || a === c) {
-				console.error('WinningLine: Duplicate indices in pattern:', sortedPattern);
+				console.error(
+					'WinningLine: Duplicate indices in pattern:',
+					sortedPattern
+				);
 				return null;
 			}
 
@@ -139,18 +138,6 @@ const WinningLine = memo(function WinningLine({
 				borderRadius: 3,
 				transform: [{ rotate: `${angle}deg` }],
 			};
-
-			console.log('WinningLine: Calculated line style:', {
-				pattern: sortedPattern,
-				start: `(${startX}, ${startY})`,
-				end: `(${endX}, ${endY})`,
-				center: `(${centerX}, ${centerY})`,
-				length: length.toFixed(2),
-				adjustedLength: adjustedLength.toFixed(2),
-				angle: angle.toFixed(2),
-				position: `(${lineStyle.left}, ${lineStyle.top})`,
-				size: `${lineStyle.width}x${lineStyle.height}`,
-			});
 
 			return lineStyle;
 		} catch (error) {

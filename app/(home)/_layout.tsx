@@ -7,11 +7,7 @@ export default function HomeLayout() {
 	const { isDarkMode } = useTheme();
 	return (
 		<>
-			<StatusBar
-				style={isDarkMode ? 'light' : 'dark'}
-				translucent={true}
-				backgroundColor='transparent'
-			/>
+			<StatusBar style={isDarkMode ? 'light' : 'dark'} translucent={true} />
 			<Stack
 				screenOptions={{
 					headerShown: false,

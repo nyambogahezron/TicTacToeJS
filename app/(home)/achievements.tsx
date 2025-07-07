@@ -8,9 +8,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInUp } from 'react-native-reanimated';
 import {
-	ArrowLeft,
 	Award,
 	Trophy,
 	Clock,
@@ -18,13 +16,12 @@ import {
 	Target,
 	Star,
 } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
 import { useTheme } from '@/context/ThemeProvider';
 import { useAchievements } from '@/context/AchievementsProvider';
+import PageHeader from '@/components/PageHeader';
 
 export default function AchievementsScreen() {
 	const { colors } = useTheme();
-	const router = useRouter();
 	const insets = useSafeAreaInsets();
 	const {
 		achievements,
@@ -197,27 +194,10 @@ export default function AchievementsScreen() {
 	return (
 		<LinearGradient colors={colors.background} style={styles.container}>
 			<View style={[styles.content, { paddingTop: insets.top }]}>
-				{/* Header */}
-				<Animated.View
-					entering={FadeInUp.springify()}
-					style={[styles.header, { borderBottomColor: colors.border }]}
-				>
-					<TouchableOpacity
-						style={[styles.backButton, { backgroundColor: colors.card }]}
-						onPress={() => router.back()}
-						activeOpacity={0.8}
-					>
-						<ArrowLeft size={24} color={colors.cardText} />
-					</TouchableOpacity>
-					<View style={styles.headerTitle}>
-						<Text style={[styles.title, { color: colors.cardText }]}>
-							Achievements
-						</Text>
-						<Text style={[styles.subtitle, { color: colors.cardSubtext }]}>
-							{getUnlockedCount()} of {getTotalCount()} unlocked
-						</Text>
-					</View>
-				</Animated.View>
+				<PageHeader
+					title='Achievements'
+					subtitle={`Unlocked: ${getUnlockedCount()} / ${getTotalCount()}`}
+				/>
 
 				{/* Category Filter */}
 				<ScrollView
@@ -256,28 +236,6 @@ const styles = StyleSheet.create({
 	},
 	content: {
 		flex: 1,
-	},
-	header: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		paddingHorizontal: 20,
-		paddingTop: 5,
-		paddingBottom: 20,
-	},
-	backButton: {
-		width: 44,
-		height: 44,
-		borderRadius: 22,
-		justifyContent: 'center',
-		alignItems: 'center',
-		marginRight: 16,
-	},
-	headerTitle: {
-		flex: 1,
-	},
-	title: {
-		fontSize: 25,
-		fontFamily: 'Inter-Bold',
 	},
 	subtitle: {
 		fontSize: 14,

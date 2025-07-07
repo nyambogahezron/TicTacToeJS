@@ -4,6 +4,8 @@ import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 export const coins = sqliteTable('coins', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
 	amount: integer('amount').notNull().default(0),
+	achievementCoins: integer('achievement_coins').notNull().default(0),
+	gameCoins: integer('game_coins').notNull().default(0),
 	welcomeBonusGiven: integer('welcome_bonus_given').notNull().default(0),
 	lastUpdated: text('last_updated').default(sql`CURRENT_TIMESTAMP`),
 });
@@ -17,7 +19,6 @@ export const stats = sqliteTable('stats', {
 	lastUpdated: text('last_updated').default(sql`CURRENT_TIMESTAMP`),
 });
 
-// New achievements table
 export const achievements = sqliteTable('achievements', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
 	// Win streak achievements
@@ -49,7 +50,6 @@ export const achievements = sqliteTable('achievements', {
 	lastUpdated: text('last_updated').default(sql`CURRENT_TIMESTAMP`),
 });
 
-// Daily activity tracking
 export const dailyActivity = sqliteTable('daily_activity', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
 	date: text('date').notNull(), // YYYY-MM-DD format
@@ -58,7 +58,6 @@ export const dailyActivity = sqliteTable('daily_activity', {
 	lastActivity: text('last_activity').default(sql`CURRENT_TIMESTAMP`),
 });
 
-// Session tracking for time-based achievements
 export const sessions = sqliteTable('sessions', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
 	startTime: text('start_time').default(sql`CURRENT_TIMESTAMP`),

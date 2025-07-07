@@ -1,11 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-	View,
-	Text,
-	StyleSheet,
-	TouchableOpacity,
-	ScrollView,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp } from 'react-native-reanimated';
@@ -14,7 +8,6 @@ import {
 	Target,
 	Zap,
 	Award,
-	ArrowLeft,
 	Coins,
 	TrendingUp,
 	GamepadIcon,
@@ -22,13 +15,12 @@ import {
 } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeProvider';
 import { useGame } from '@/context/GameProvider';
-import { useRouter } from 'expo-router';
 import { getStats } from '@/services/database';
+import PageHeader from '@/components/PageHeader';
 
 export default function StatsScreen() {
 	const { colors } = useTheme();
 	const { state } = useGame();
-	const router = useRouter();
 	const insets = useSafeAreaInsets();
 	const [dbStats, setDbStats] = useState({
 		gamesPlayed: 0,
@@ -108,29 +100,10 @@ export default function StatsScreen() {
 	);
 
 	return (
-		<LinearGradient
-			colors={['#0f172a', '#1e293b', '#334155']}
-			style={styles.container}
-		>
+		<LinearGradient colors={colors.background} style={styles.container}>
 			<View style={[styles.content, { paddingTop: insets.top }]}>
 				{/* Header */}
-				<Animated.View
-					entering={FadeInUp.springify()}
-					style={[styles.header, { borderBottomColor: colors.border }]}
-				>
-					<TouchableOpacity
-						style={[styles.backButton, { backgroundColor: colors.card }]}
-						onPress={() => router.back()}
-						activeOpacity={0.8}
-					>
-						<ArrowLeft size={24} color={colors.cardText} />
-					</TouchableOpacity>
-					<View style={styles.headerTitle}>
-						<Text style={[styles.title, { color: colors.cardText }]}>
-							Your Statistics
-						</Text>
-					</View>
-				</Animated.View>
+				<PageHeader title='Your Statistics' />
 
 				<ScrollView
 					style={styles.scrollView}
@@ -227,35 +200,14 @@ const styles = StyleSheet.create({
 	content: {
 		flex: 1,
 	},
-	header: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		paddingHorizontal: 20,
-		paddingTop: 20,
-		paddingBottom: 20,
-		borderBottomWidth: 1,
-	},
-	backButton: {
-		width: 44,
-		height: 44,
-		borderRadius: 22,
-		justifyContent: 'center',
-		alignItems: 'center',
-		marginRight: 16,
-	},
-	headerTitle: {
-		flex: 1,
-	},
-	title: {
-		fontSize: 28,
-		fontFamily: 'Inter-Bold',
-	},
+
 	scrollView: {
 		flex: 1,
 	},
 	scrollContent: {
 		paddingHorizontal: 20,
-		paddingBottom: 20,
+		paddingBottom: 60,
+		paddingTop: 10,
 	},
 	statsGrid: {
 		gap: 16,

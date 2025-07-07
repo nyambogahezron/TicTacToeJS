@@ -9,12 +9,12 @@ import React, {
 } from 'react';
 import {
 	getCoins,
-	updateCoins,
 	getStats,
 	updateStats,
 	getWelcomeBonusStatus,
 	setWelcomeBonusGiven,
 	completeGame,
+	addGameCoins,
 } from '@/services/database';
 
 type Player = 'X' | 'O' | null;
@@ -62,7 +62,8 @@ type GameAction =
 	| { type: 'SET_STATS'; stats: { X: number; O: number; draws: number } }
 	| { type: 'SET_COINS'; coins: number }
 	| { type: 'SET_FIRST_TIME'; isFirstTime: boolean }
-	| { type: 'SET_GAME_LEVEL'; level: number };
+	| { type: 'SET_GAME_LEVEL'; level: number }
+	| { type: 'SYNC_COINS' };
 
 const initialState: GameState = {
 	board: Array(9).fill(null),
@@ -431,12 +432,6 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
 				const { winner, pattern } = checkWinner(newBoard);
 				if (winner) {
-					console.log(
-						'Winner detected in classic mode:',
-						winner,
-						'Pattern:',
-						pattern
-					);
 					return updateGameEndState(
 						state,
 						newBoard,
@@ -482,12 +477,6 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 					// Check for winner after placement
 					const { winner, pattern } = checkWinner(newBoard);
 					if (winner) {
-						console.log(
-							'Winner detected during placement:',
-							winner,
-							'Pattern:',
-							pattern
-						);
 						return updateGameEndState(
 							state,
 							newBoard,
@@ -545,12 +534,6 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 					// Check for winner after placement
 					const { winner, pattern } = checkWinner(newBoard);
 					if (winner) {
-						console.log(
-							'Winner detected during placement in Level 3:',
-							winner,
-							'Pattern:',
-							pattern
-						);
 						return updateGameEndState(
 							state,
 							newBoard,
@@ -672,6 +655,10 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 				coins: action.coins,
 			};
 
+		case 'SYNC_COINS':
+			// This action is just a trigger, the actual coin sync will be handled in useEffect
+			return state;
+
 		case 'SET_FIRST_TIME':
 			return {
 				...state,
@@ -750,7 +737,6 @@ function handlePieceMove(
 	// Check for winner with the new board state
 	const { winner, pattern } = checkWinner(newBoard);
 	if (winner) {
-		console.log('Winner detected:', winner, 'Pattern:', pattern);
 		return updateGameEndState(
 			state,
 			newBoard,
@@ -764,7 +750,6 @@ function handlePieceMove(
 	// Check for draw (loop detection)
 	const isDraw = checkDraw(newBoard, newMoveHistory, state.gamePhase);
 	if (isDraw) {
-		console.log('Draw detected due to repeated moves');
 		return updateGameEndState(
 			state,
 			newBoard,
@@ -839,7 +824,6 @@ function handlePieceMoveLevel3(
 	// Check for winner with the new board state
 	const { winner, pattern } = checkWinner(newBoard);
 	if (winner) {
-		console.log('Winner detected in Level 3:', winner, 'Pattern:', pattern);
 		return updateGameEndState(
 			state,
 			newBoard,
@@ -853,7 +837,6 @@ function handlePieceMoveLevel3(
 	// Check for draw (loop detection)
 	const isDraw = checkDraw(newBoard, newMoveHistory, state.gamePhase);
 	if (isDraw) {
-		console.log('Draw detected due to repeated moves in Level 3');
 		return updateGameEndState(
 			state,
 			newBoard,
@@ -893,10 +876,10 @@ function updateGameEndState(
 
 	if (winner === 'X') {
 		newScore.X++;
-		newCoins += 3;
+		newCoins += 3; // This will be synced to DB later
 		newConsecutiveWins++;
 		if (newConsecutiveWins === 3) {
-			newCoins += 3;
+			newCoins += 3; // Bonus for 3 consecutive wins
 			newConsecutiveWins = 0;
 		}
 	} else if (winner === 'O') {
@@ -904,12 +887,12 @@ function updateGameEndState(
 		newConsecutiveWins = 0;
 	} else if (winner === 'draw') {
 		newScore.draws++;
-		newCoins += 1;
+		newCoins += 1; // Draw coin reward
 		newConsecutiveWins = 0;
 	}
 
 	if (isFirstTime) {
-		newCoins += 10;
+		newCoins += 10; // Welcome bonus
 		isFirstTime = false;
 		setTimeout(async () => {
 			try {
@@ -920,21 +903,50 @@ function updateGameEndState(
 		}, 0);
 	}
 
-	// Handle achievements asynchronously
+	// Handle achievements and coin sync asynchronously
 	setTimeout(async () => {
 		try {
 			const totalGames = newScore.X + newScore.O + newScore.draws;
 			const gameResult =
 				winner === 'X' ? 'win' : winner === 'O' ? 'loss' : 'draw';
 
+			// Calculate game coins earned this round
+			let gameCoinsEarned = 0;
+			if (winner === 'X') {
+				gameCoinsEarned += 3;
+				// Check if consecutive wins were reset (meaning we just got the bonus)
+				if (newConsecutiveWins === 0 && state.consecutiveWins >= 2) {
+					gameCoinsEarned += 3; // Consecutive win bonus
+				}
+			} else if (winner === 'draw') {
+				gameCoinsEarned += 1;
+			}
+			if (isFirstTime) {
+				gameCoinsEarned += 10; // Welcome bonus
+			}
+
+			// Add game coins to database if any were earned
+			if (gameCoinsEarned > 0) {
+				await addGameCoins(gameCoinsEarned);
+			}
+
+			// Check for achievements (this will add achievement coins automatically)
 			await completeGame(
 				gameResult,
 				newConsecutiveWins,
 				newScore.X,
 				totalGames
 			);
+
+			// Refresh coins from database to get the latest total including achievements
+			const updatedCoins = await getCoins();
+
+			// Update the game state with the correct coin total
+			// This needs to be handled through a global mechanism since we can't access dispatch here
+			(global as any).updateGameCoins = updatedCoins;
+			(global as any).needsCoinSync = true;
 		} catch (error) {
-			console.error('Error handling achievements:', error);
+			console.error('Error handling achievements and coins:', error);
 		}
 	}, 0);
 
@@ -965,6 +977,7 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 		const loadGameState = async () => {
 			try {
 				setIsLoading(true);
+
 				// Load coins
 				const coins = await getCoins();
 				dispatch({ type: 'SET_COINS', coins });
@@ -1007,9 +1020,6 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 			if (isLoading) return; // Don't save while initial loading is in progress
 
 			try {
-				// Save coins
-				await updateCoins(state.coins);
-
 				// Calculate total games
 				const totalGames = state.score.X + state.score.O + state.score.draws;
 
@@ -1026,7 +1036,7 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 		};
 
 		saveGameState();
-	}, [state.coins, state.score, isLoading]);
+	}, [state.score, isLoading]);
 
 	// AI move logic
 	React.useEffect(() => {
@@ -1080,6 +1090,64 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 		state.piecesPlaced,
 		state.gameLevel,
 	]);
+
+	// Sync coins from database when achievements are unlocked
+	useEffect(() => {
+		const syncCoins = async () => {
+			try {
+				// Check if coin sync is needed
+				if ((global as any).needsCoinSync) {
+					(global as any).needsCoinSync = false;
+
+					// Wait a bit for the database operations to complete
+					await new Promise((resolve) => setTimeout(resolve, 100));
+
+					// Get updated coins from database
+					const updatedCoins = await getCoins();
+					dispatch({ type: 'SET_COINS', coins: updatedCoins });
+				}
+			} catch (error) {
+				console.error('Error syncing coins:', error);
+			}
+		};
+
+		// Check every 500ms for coin sync needs
+		const interval = setInterval(syncCoins, 500);
+
+		return () => clearInterval(interval);
+	}, []);
+
+	// Watch for coin sync needs from global flags
+	useEffect(() => {
+		const checkCoinSync = setInterval(() => {
+			if ((global as any).needsCoinSync && (global as any).updateGameCoins) {
+				const newCoins = (global as any).updateGameCoins;
+				dispatch({ type: 'SET_COINS', coins: newCoins });
+
+				// Clear the flags
+				(global as any).needsCoinSync = false;
+				(global as any).updateGameCoins = undefined;
+			}
+		}, 100); // Check every 100ms
+
+		return () => clearInterval(checkCoinSync);
+	}, []);
+
+	// Force refresh coins from database periodically
+	useEffect(() => {
+		const refreshCoins = setInterval(async () => {
+			try {
+				const latestCoins = await getCoins();
+				if (latestCoins !== state.coins) {
+					dispatch({ type: 'SET_COINS', coins: latestCoins });
+				}
+			} catch (error) {
+				console.error('Error refreshing coins:', error);
+			}
+		}, 2000); // Check every 2 seconds
+
+		return () => clearInterval(refreshCoins);
+	}, [state.coins]);
 
 	if (isLoading) {
 		return null;

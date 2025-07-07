@@ -16,7 +16,6 @@ import {
 	Vibrate,
 	Bot,
 	Moon,
-	ArrowLeft,
 	ExternalLink,
 	Users,
 	Gamepad2,
@@ -24,14 +23,13 @@ import {
 import { useAudio } from '@/context/AudioProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { useGame } from '@/context/GameProvider';
-import { useRouter } from 'expo-router';
 import DetailedLevelSelector from '@/components/DetailedLevelSelector';
+import PageHeader from '@/components/PageHeader';
 
 export default function SettingsScreen() {
 	const { soundEnabled, hapticEnabled, toggleSound, toggleHaptic } = useAudio();
 	const { isDarkMode, toggleTheme, colors } = useTheme();
 	const { state, dispatch } = useGame();
-	const router = useRouter();
 	const insets = useSafeAreaInsets();
 	const [aiDifficulty, setAiDifficulty] = React.useState(true);
 
@@ -154,24 +152,7 @@ export default function SettingsScreen() {
 	return (
 		<LinearGradient colors={colors.background} style={styles.container}>
 			<View style={[styles.content, { paddingTop: insets.top }]}>
-				{/* Header */}
-				<Animated.View
-					entering={FadeInUp.springify()}
-					style={[styles.header, { borderBottomColor: colors.border }]}
-				>
-					<TouchableOpacity
-						style={[styles.backButton, { backgroundColor: colors.card }]}
-						onPress={() => router.back()}
-						activeOpacity={0.8}
-					>
-						<ArrowLeft size={24} color={colors.cardText} />
-					</TouchableOpacity>
-					<View style={styles.headerTitle}>
-						<Text style={[styles.title, { color: colors.cardText }]}>
-							Settings
-						</Text>
-					</View>
-				</Animated.View>
+				<PageHeader title='Settings' />
 
 				<ScrollView
 					style={styles.scrollView}
@@ -254,34 +235,12 @@ const styles = StyleSheet.create({
 	content: {
 		flex: 1,
 	},
-	header: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		paddingHorizontal: 20,
-		paddingTop: 20,
-		paddingBottom: 20,
-		borderBottomWidth: 1,
-	},
-	backButton: {
-		width: 44,
-		height: 44,
-		borderRadius: 22,
-		justifyContent: 'center',
-		alignItems: 'center',
-		marginRight: 16,
-	},
-	headerTitle: {
-		flex: 1,
-	},
-	title: {
-		fontSize: 28,
-		fontFamily: 'Inter-Bold',
-	},
+
 	scrollView: {
 		flex: 1,
 	},
 	scrollContent: {
-		paddingHorizontal: 20,
+		paddingHorizontal: 15,
 		paddingBottom: 40,
 	},
 	settingsContainer: {

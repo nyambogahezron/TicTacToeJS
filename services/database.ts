@@ -32,14 +32,15 @@ export const getCoins = async (): Promise<number> => {
 			return coinCache.amount;
 		}
 
-		const result = await db.select().from(coins).orderBy(coins.id).limit(1);
-		const amount = result[0]?.amount ?? 0;
+		// Get the breakdown and calculate total
+		const breakdown = await getCoinBreakdown();
+		const amount = breakdown.total;
 
 		// Update cache
 		coinCache = {
 			amount,
 			timestamp: Date.now(),
-			welcomeBonus: result[0]?.welcomeBonusGiven === 1,
+			welcomeBonus: false, // Will be updated by getWelcomeBonusStatus if needed
 		};
 
 		return amount;
@@ -73,34 +74,6 @@ export const getWelcomeBonusStatus = async (): Promise<boolean> => {
 	}
 };
 
-export const updateCoins = async (amount: number): Promise<void> => {
-	try {
-		const currentCoin = await db
-			.select()
-			.from(coins)
-			.orderBy(coins.id)
-			.limit(1);
-
-		if (currentCoin.length > 0) {
-			await db
-				.update(coins)
-				.set({
-					amount,
-					lastUpdated: sql`CURRENT_TIMESTAMP`,
-				})
-				.where(sql`id = ${currentCoin[0].id}`);
-		} else {
-			await db.insert(coins).values({ amount });
-		}
-
-		// Invalidate cache
-		coinCache = null;
-	} catch (error) {
-		console.error('Error updating coins:', error);
-		throw error;
-	}
-};
-
 export const setWelcomeBonusGiven = async (): Promise<void> => {
 	try {
 		const currentCoin = await db
@@ -129,12 +102,72 @@ export const setWelcomeBonusGiven = async (): Promise<void> => {
 	}
 };
 
-export const addCoins = async (amount: number): Promise<void> => {
+// Add coins with proper tracking (achievement vs game coins)
+export const addAchievementCoins = async (amount: number): Promise<void> => {
 	try {
-		const currentCoins = await getCoins();
-		await updateCoins(currentCoins + amount);
+		const currentRecord = await db
+			.select()
+			.from(coins)
+			.orderBy(coins.id)
+			.limit(1);
+
+		if (currentRecord.length > 0) {
+			const current = currentRecord[0];
+			const newAchievementCoins = (current.achievementCoins || 0) + amount;
+
+			await db
+				.update(coins)
+				.set({
+					achievementCoins: newAchievementCoins,
+					lastUpdated: sql`CURRENT_TIMESTAMP`,
+				})
+				.where(sql`id = ${current.id}`);
+		} else {
+			await db.insert(coins).values({
+				achievementCoins: amount,
+				gameCoins: 0,
+			});
+		}
+
+		// Invalidate cache
+		coinCache = null;
 	} catch (error) {
-		console.error('Error adding coins:', error);
+		console.error('Error adding achievement coins:', error);
+		throw error;
+	}
+};
+
+// Add game coins (from gameplay)
+export const addGameCoins = async (amount: number): Promise<void> => {
+	try {
+		const currentRecord = await db
+			.select()
+			.from(coins)
+			.orderBy(coins.id)
+			.limit(1);
+
+		if (currentRecord.length > 0) {
+			const current = currentRecord[0];
+			const newGameCoins = (current.gameCoins || 0) + amount;
+
+			await db
+				.update(coins)
+				.set({
+					gameCoins: newGameCoins,
+					lastUpdated: sql`CURRENT_TIMESTAMP`,
+				})
+				.where(sql`id = ${current.id}`);
+		} else {
+			await db.insert(coins).values({
+				achievementCoins: 0,
+				gameCoins: amount,
+			});
+		}
+
+		// Invalidate cache
+		coinCache = null;
+	} catch (error) {
+		console.error('Error adding game coins:', error);
 		throw error;
 	}
 };
@@ -244,7 +277,8 @@ export const completeGame = async (
 				(total, achievement) => total + achievement.coinReward,
 				0
 			);
-			await addCoins(achievementCoins);
+
+			await addAchievementCoins(achievementCoins);
 
 			// Show achievement popups
 			if (newAchievements.length > 0) {
@@ -283,5 +317,34 @@ export const finalizeSession = async (): Promise<void> => {
 		await endSession();
 	} catch (error) {
 		console.error('Error finalizing session:', error);
+	}
+};
+
+// Get detailed coin breakdown
+export const getCoinBreakdown = async (): Promise<{
+	total: number;
+	gameCoins: number;
+	achievementCoins: number;
+}> => {
+	try {
+		const result = await db.select().from(coins).orderBy(coins.id).limit(1);
+
+		if (result.length === 0) {
+			return { total: 0, gameCoins: 0, achievementCoins: 0 };
+		}
+
+		const record = result[0];
+		const gameCoins = record.gameCoins || 0;
+		const achievementCoins = record.achievementCoins || 0;
+		const total = gameCoins + achievementCoins;
+
+		return {
+			total,
+			gameCoins,
+			achievementCoins,
+		};
+	} catch (error) {
+		console.error('Error getting coin breakdown:', error);
+		return { total: 0, gameCoins: 0, achievementCoins: 0 };
 	}
 };
