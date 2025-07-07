@@ -1066,7 +1066,7 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 						});
 					}
 				}
-			}, 800); // Delay for better UX
+			}, 800);
 
 			return () => clearTimeout(timer);
 		}
@@ -1081,19 +1081,8 @@ export default function GameProvider({ children }: { children: ReactNode }) {
 		state.gameLevel,
 	]);
 
-	// Remove automatic reset - now handled by WinningLine animation
-	// React.useEffect(() => {
-	// 	if (state.winner) {
-	// 		const timer = setTimeout(() => {
-	// 			dispatch({ type: 'RESET_GAME' });
-	// 		}, 1000); // Reset after 1 second
-
-	// 		return () => clearTimeout(timer);
-	// 	}
-	// }, [state.winner, dispatch]);
-
 	if (isLoading) {
-		return null; // Or a loading spinner if you prefer
+		return null;
 	}
 
 	return (

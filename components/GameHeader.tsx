@@ -1,3 +1,4 @@
+import React from 'react';
 import {
 	Bot,
 	RotateCcw,
@@ -7,7 +8,6 @@ import {
 	Coins,
 	Award,
 } from 'lucide-react-native';
-import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
 	FadeInUp,
@@ -42,7 +42,6 @@ export default function GameHeader() {
 		if (state.winner === 'O')
 			return state.gameMode === 'vsAI' ? 'AI Wins!' : 'Player O Wins!';
 
-		// Show whose turn it is
 		if (state.currentPlayer === 'X') {
 			return 'Your Turn';
 		} else {
@@ -57,14 +56,17 @@ export default function GameHeader() {
 		return '#60a5fa';
 	};
 
-	const IconButton = ({ icon: Icon, onPress, color = colors.text }: any) => (
-		<TouchableOpacity
-			style={[styles.iconButton, { borderColor: colors.border }]}
-			onPress={onPress}
-			activeOpacity={0.8}
-		>
-			<Icon size={20} color={color} />
-		</TouchableOpacity>
+	const IconButton = React.useCallback(
+		({ icon: Icon, onPress, color }: iconProps) => (
+			<TouchableOpacity
+				style={[styles.iconButton, { borderColor: color }]}
+				onPress={onPress}
+				activeOpacity={0.8}
+			>
+				<Icon size={20} color={color} />
+			</TouchableOpacity>
+		),
+		[]
 	);
 
 	return (
@@ -92,7 +94,7 @@ export default function GameHeader() {
 					</View>
 					<IconButton
 						icon={Award}
-						onPress={() => router.push('./achievements' as any)}
+						onPress={() => router.push('/achievements')}
 						color='#10b981'
 					/>
 					<IconButton
@@ -105,15 +107,6 @@ export default function GameHeader() {
 						onPress={() => router.push('/settings')}
 						color='#f59e0b'
 					/>
-					<Animated.View style={resetButtonStyle}>
-						<TouchableOpacity
-							style={[styles.resetButton, { borderColor: colors.border }]}
-							onPress={handleReset}
-							activeOpacity={0.8}
-						>
-							<RotateCcw size={20} color={colors.text} />
-						</TouchableOpacity>
-					</Animated.View>
 				</View>
 			</View>
 
@@ -156,6 +149,15 @@ export default function GameHeader() {
 						{state.gameMode === 'vsAI' ? 'AI' : 'Player 2'}: {state.score.O}
 					</Text>
 				</View>
+				<Animated.View style={resetButtonStyle}>
+					<TouchableOpacity
+						style={[styles.resetButton, { borderColor: colors.border }]}
+						onPress={handleReset}
+						activeOpacity={0.8}
+					>
+						<RotateCcw size={20} color={colors.text} />
+					</TouchableOpacity>
+				</Animated.View>
 			</View>
 		</Animated.View>
 	);

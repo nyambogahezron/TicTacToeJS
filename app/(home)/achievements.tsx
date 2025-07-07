@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
 	View,
 	Text,
@@ -33,11 +33,6 @@ export default function AchievementsScreen() {
 		getTotalCount,
 	} = useAchievements();
 	const [selectedCategory, setSelectedCategory] = useState<string>('all');
-
-	useEffect(() => {
-		// Refresh achievements when screen loads
-		// This will be handled by the provider
-	}, []);
 
 	const categories = [
 		{ id: 'all', name: 'All', icon: Star },
@@ -91,24 +86,16 @@ export default function AchievementsScreen() {
 		const progressPercentage = getProgressPercentage(achievement);
 
 		return (
-			<Animated.View
-				entering={FadeInUp.delay(index * 100).springify()}
+			<View
 				style={[
 					styles.achievementCard,
 					{
-						backgroundColor: colors.card,
 						borderColor: achievement.unlocked ? categoryColor : colors.border,
-						opacity: achievement.unlocked ? 1 : 0.6,
 					},
 				]}
 			>
 				<View style={styles.achievementHeader}>
-					<View
-						style={[
-							styles.achievementIconContainer,
-							{ backgroundColor: categoryColor + '20' },
-						]}
-					>
+					<View style={[styles.achievementIconContainer]}>
 						<Text style={styles.achievementEmoji}>{achievement.icon}</Text>
 						{achievement.unlocked && (
 							<View
@@ -144,7 +131,13 @@ export default function AchievementsScreen() {
 				{/* Progress Bar */}
 				<View style={styles.progressContainer}>
 					<View
-						style={[styles.progressBar, { backgroundColor: colors.border }]}
+						style={[
+							styles.progressBar,
+							{
+								backgroundColor: colors.border,
+								opacity: 0.8,
+							},
+						]}
 					>
 						<View
 							style={[
@@ -160,7 +153,7 @@ export default function AchievementsScreen() {
 						{achievement.progress}/{achievement.maxProgress}
 					</Text>
 				</View>
-			</Animated.View>
+			</View>
 		);
 	};
 
@@ -268,9 +261,8 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		alignItems: 'center',
 		paddingHorizontal: 20,
-		paddingTop: 20,
+		paddingTop: 5,
 		paddingBottom: 20,
-		borderBottomWidth: 1,
 	},
 	backButton: {
 		width: 44,
@@ -284,7 +276,7 @@ const styles = StyleSheet.create({
 		flex: 1,
 	},
 	title: {
-		fontSize: 28,
+		fontSize: 25,
 		fontFamily: 'Inter-Bold',
 	},
 	subtitle: {
@@ -295,10 +287,11 @@ const styles = StyleSheet.create({
 	categoriesContainer: {
 		paddingHorizontal: 20,
 		paddingVertical: 16,
-		maxHeight: 80,
+		maxHeight: 75,
 	},
 	categoriesContent: {
 		gap: 12,
+		paddingRight: 20,
 	},
 	categoryButton: {
 		flexDirection: 'row',
@@ -308,7 +301,7 @@ const styles = StyleSheet.create({
 		borderRadius: 20,
 		borderWidth: 1,
 		gap: 8,
-		minHeight: 44,
+		minHeight: 35,
 		minWidth: 80,
 	},
 	categoryText: {
@@ -317,28 +310,22 @@ const styles = StyleSheet.create({
 	},
 	achievementsList: {
 		flex: 1,
-		paddingHorizontal: 20,
+		paddingHorizontal: 15,
 		paddingTop: 0,
 	},
 	achievementsContent: {
 		gap: 16,
-		paddingBottom: 20,
+		paddingBottom: 60,
 		paddingTop: 8,
 	},
 	achievementCard: {
 		borderRadius: 16,
-		padding: 16,
-		borderWidth: 2,
-		shadowColor: '#000',
-		shadowOffset: {
-			width: 0,
-			height: 2,
-		},
-		shadowOpacity: 0.1,
-		shadowRadius: 3,
-		elevation: 3,
+		paddingHorizontal: 16,
+		paddingVertical: 12,
+		borderWidth: 1,
 		minHeight: 100,
 		maxHeight: 140,
+		overflow: 'hidden',
 	},
 	achievementHeader: {
 		flexDirection: 'row',
@@ -346,6 +333,9 @@ const styles = StyleSheet.create({
 		marginBottom: 12,
 		minHeight: 60,
 		maxHeight: 80,
+		backgroundColor: 'transparent',
+		paddingHorizontal: 0,
+		paddingVertical: 0,
 	},
 	achievementIconContainer: {
 		width: 60,
@@ -355,6 +345,7 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		marginRight: 12,
 		position: 'relative',
+		backgroundColor: 'transparent',
 	},
 	achievementEmoji: {
 		fontSize: 28,
@@ -388,7 +379,7 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 8,
 		paddingVertical: 4,
 		borderRadius: 8,
-		backgroundColor: '#f59e0b' + '20',
+		backgroundColor: 'rgba(245, 158, 11, 0.1)',
 	},
 	rewardText: {
 		fontSize: 12,
@@ -398,12 +389,14 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		alignItems: 'center',
 		gap: 12,
+		backgroundColor: 'transparent',
 	},
 	progressBar: {
 		flex: 1,
 		height: 6,
 		borderRadius: 3,
 		overflow: 'hidden',
+		backgroundColor: 'transparent',
 	},
 	progressFill: {
 		height: '100%',

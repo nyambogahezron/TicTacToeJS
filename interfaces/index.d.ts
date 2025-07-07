@@ -8,3 +8,9 @@ interface AudioContextType {
 		type: 'light' | 'medium' | 'heavy' | 'success' | 'error'
 	) => Promise<void>;
 }
+
+interface iconProps {
+	icon: React.ComponentType<{ size: number; color: string }>;
+	onPress: () => void;
+	color: string;
+}

@@ -17,7 +17,6 @@ const GameScreen = memo(function GameScreen() {
 	const [coinPopup, setCoinPopup] = useState<{ amount: number } | null>(null);
 	const [prevCoins, setPrevCoins] = useState(state.coins);
 
-	// Track coin changes and show popup with better performance
 	useEffect(() => {
 		if (state.coins > prevCoins) {
 			const earnedCoins = state.coins - prevCoins;

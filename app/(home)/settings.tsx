@@ -18,15 +18,19 @@ import {
 	Moon,
 	ArrowLeft,
 	ExternalLink,
+	Users,
+	Gamepad2,
 } from 'lucide-react-native';
 import { useAudio } from '@/context/AudioProvider';
 import { useTheme } from '@/context/ThemeProvider';
+import { useGame } from '@/context/GameProvider';
 import { useRouter } from 'expo-router';
 import DetailedLevelSelector from '@/components/DetailedLevelSelector';
 
 export default function SettingsScreen() {
 	const { soundEnabled, hapticEnabled, toggleSound, toggleHaptic } = useAudio();
 	const { isDarkMode, toggleTheme, colors } = useTheme();
+	const { state, dispatch } = useGame();
 	const router = useRouter();
 	const insets = useSafeAreaInsets();
 	const [aiDifficulty, setAiDifficulty] = React.useState(true);
@@ -64,6 +68,88 @@ export default function SettingsScreen() {
 			/>
 		</Animated.View>
 	);
+
+	const GameModeSelectorSetting = () => {
+		const gameModes = [
+			{
+				id: 'vsAI' as const,
+				name: 'vs AI',
+				icon: Bot,
+				description: 'Play against computer',
+			},
+			{
+				id: 'vsPlayer' as const,
+				name: 'vs Player',
+				icon: Users,
+				description: 'Play with a friend',
+			},
+		];
+
+		const handleModeChange = (mode: 'vsAI' | 'vsPlayer') => {
+			dispatch({ type: 'SET_GAME_MODE', mode });
+			// Reset the game when switching modes to avoid confusion
+			dispatch({ type: 'RESET_GAME' });
+		};
+
+		return (
+			<Animated.View
+				entering={FadeInUp.delay(300).springify()}
+				style={[styles.settingCard, { backgroundColor: colors.card }]}
+			>
+				<View style={styles.settingIcon}>
+					<Gamepad2 size={24} color='#8b5cf6' />
+				</View>
+				<View style={styles.settingContent}>
+					<Text style={[styles.settingTitle, { color: colors.cardText }]}>
+						Game Mode
+					</Text>
+					<Text
+						style={[styles.settingDescription, { color: colors.cardSubtext }]}
+					>
+						Choose how you want to play
+					</Text>
+					<View style={styles.gameModeOptions}>
+						{gameModes.map((mode) => {
+							const IconComponent = mode.icon;
+							const isSelected = state.gameMode === mode.id;
+
+							return (
+								<TouchableOpacity
+									key={mode.id}
+									style={[
+										styles.gameModeButton,
+										{
+											backgroundColor: isSelected
+												? '#8b5cf6'
+												: colors.background[1],
+											borderColor: isSelected ? '#8b5cf6' : colors.border,
+										},
+									]}
+									onPress={() => handleModeChange(mode.id)}
+									activeOpacity={0.8}
+								>
+									<IconComponent
+										size={16}
+										color={isSelected ? '#fff' : colors.cardText}
+									/>
+									<Text
+										style={[
+											styles.gameModeText,
+											{
+												color: isSelected ? '#fff' : colors.cardText,
+											},
+										]}
+									>
+										{mode.name}
+									</Text>
+								</TouchableOpacity>
+							);
+						})}
+					</View>
+				</View>
+			</Animated.View>
+		);
+	};
 
 	return (
 		<LinearGradient colors={colors.background} style={styles.container}>
@@ -109,6 +195,7 @@ export default function SettingsScreen() {
 							onValueChange={toggleHaptic}
 							color='#f59e0b'
 						/>
+						<GameModeSelectorSetting />
 						<SettingItem
 							icon={Bot}
 							title='Hard AI'
@@ -247,5 +334,25 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		fontFamily: 'Inter-Regular',
 		textDecorationLine: 'underline',
+	},
+	gameModeOptions: {
+		flexDirection: 'row',
+		gap: 8,
+		marginTop: 12,
+	},
+	gameModeButton: {
+		flex: 1,
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'center',
+		paddingVertical: 8,
+		paddingHorizontal: 12,
+		borderRadius: 8,
+		borderWidth: 1,
+		gap: 6,
+	},
+	gameModeText: {
+		fontSize: 13,
+		fontFamily: 'Inter-Medium',
 	},
 });

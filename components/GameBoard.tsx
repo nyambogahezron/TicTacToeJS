@@ -15,7 +15,6 @@ const GameBoard = memo(function GameBoard() {
 	const { colors } = useTheme();
 	const timeoutRef = useRef<number | null>(null);
 
-	// Cleanup timeout on unmount
 	useEffect(() => {
 		return () => {
 			if (timeoutRef.current) {
@@ -26,7 +25,6 @@ const GameBoard = memo(function GameBoard() {
 
 	const handleWinningLineComplete = useCallback(() => {
 		try {
-			// Clear any existing timeout
 			if (timeoutRef.current) {
 				clearTimeout(timeoutRef.current);
 			}

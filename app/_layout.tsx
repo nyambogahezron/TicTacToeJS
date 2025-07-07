@@ -43,7 +43,6 @@ export default function RootLayout() {
 	useDrizzleStudio(db.$client);
 
 	React.useEffect(() => {
-		// Configure system UI for edge-to-edge
 		if (Platform.OS === 'android') {
 			SystemUI.setBackgroundColorAsync('transparent');
 		} else {
@@ -60,7 +59,6 @@ export default function RootLayout() {
 					Inter_700Bold,
 				});
 
-				// Check if user has seen welcome screen
 				const welcomed = await AsyncStorage.getItem('hasSeenWelcome');
 				setHasSeenWelcome(welcomed === 'true');
 			} catch (e) {
@@ -87,7 +85,6 @@ export default function RootLayout() {
 		return null;
 	}
 
-	// Show welcome screen if user hasn't seen it
 	if (!hasSeenWelcome) {
 		return (
 			<SafeAreaProvider>

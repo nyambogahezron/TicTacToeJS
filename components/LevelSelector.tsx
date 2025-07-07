@@ -12,6 +12,8 @@ export default function LevelSelector() {
 		{ id: 1, name: 'L1', disabled: false },
 		{ id: 2, name: 'L2', disabled: false },
 		{ id: 3, name: 'L3', disabled: false },
+		{ id: 4, name: 'L4', disabled: true },
+		{ id: 5, name: 'L5', disabled: true },
 	];
 
 	const handleLevelChange = (levelId: number) => {
@@ -60,7 +62,7 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		justifyContent: 'center',
 		gap: 8,
-		marginTop: 16,
+		marginBottom: 40,
 	},
 	levelButton: {
 		width: 40,
